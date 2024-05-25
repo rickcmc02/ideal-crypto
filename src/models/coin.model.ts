@@ -1,5 +1,7 @@
+export type CurrencyType = "krw" | "usd";
+
 export interface RequestCoinMarkets {
-  vs_currency: string;
+  vs_currency: CurrencyType;
   ids?: string;
   category?: string;
   order?: string;

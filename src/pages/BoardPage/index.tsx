@@ -1,8 +1,16 @@
-import { CoinMarket, RequestCoinMarkets } from "models/coin.model";
+import {
+  CoinMarket,
+  CurrencyType,
+  RequestCoinMarkets,
+} from "models/coin.model";
 import { useEffect, useState } from "react";
 
 import { getCoinMarkets } from "pages/remotes";
-import { COIN_MARKET_CONTROLLER, COIN_MARKET_HEADERS } from "./data";
+import {
+  COIN_MARKET_CONTROLLER,
+  COIN_MARKET_HEADERS,
+  CoinMarketHeader,
+} from "./data";
 
 import {
   Button,
@@ -25,6 +33,11 @@ type ViewMode = "list" | "bookmark";
 const viewModeLabels: { [key in ViewMode]: string } = {
   list: "전체보기",
   bookmark: "북마크",
+};
+
+const currencySymbols: { [key in CurrencyType]: string } = {
+  krw: "₩",
+  usd: "$",
 };
 
 function BoardPage() {
@@ -134,7 +147,9 @@ function BoardPage() {
             <TableRow>
               <TableCell></TableCell>
               {COIN_MARKET_HEADERS.map((header) => (
-                <TableCell key={header.id}>{header.label}</TableCell>
+                <TableCell key={header.id} align={header.align || "left"}>
+                  {header.label}
+                </TableCell>
               ))}
             </TableRow>
           </TableHead>
@@ -146,8 +161,12 @@ function BoardPage() {
                     <Star />
                   </IconButton>
                 </TableCell>
-                {COIN_MARKET_HEADERS.map((header) => (
-                  <TableCell key={header.id}>{coinMarket[header.id]}</TableCell>
+                {COIN_MARKET_HEADERS.map((header: CoinMarketHeader) => (
+                  <BoardTableCell
+                    header={header}
+                    value={coinMarket[header.id]}
+                    currency={coinMarketParams.vs_currency}
+                  />
                 ))}
               </TableRow>
             ))}
@@ -167,5 +186,44 @@ function BoardPage() {
     </div>
   );
 }
+
+interface BoardTableCellProps {
+  header: CoinMarketHeader;
+  value: string | number;
+  currency: CurrencyType;
+}
+
+const BoardTableCell = ({ header, value, currency }: BoardTableCellProps) => {
+  let valueColor = "black";
+  let valueFontSize = "16px";
+  if (header.id === "symbol") {
+    valueColor = "gray";
+    valueFontSize = "14px";
+  }
+  if (header.isCurrency) {
+    const symbol = currencySymbols[currency];
+    const twoDecimal = Math.floor((value as number) * 100) / 100;
+    value = symbol + twoDecimal.toLocaleString();
+  }
+  if (header.isPercentage) {
+    const oneDecimal = Math.floor((value as number) * 10) / 10;
+    if (oneDecimal > 0) valueColor = "red";
+    if (oneDecimal < 0) valueColor = "blue";
+    value = oneDecimal + "%";
+  }
+
+  const cellStyle: { [key: string]: string } = {
+    color: valueColor,
+    fontSize: valueFontSize,
+    fontWeight: "bold",
+    textTransform: header.isUpperCase ? "uppercase" : "none",
+  };
+
+  return (
+    <TableCell key={header.id} align={header.align || "left"} style={cellStyle}>
+      {value}
+    </TableCell>
+  );
+};
 
 export default BoardPage;
