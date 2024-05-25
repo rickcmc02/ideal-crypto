@@ -40,6 +40,17 @@ const currencySymbols: { [key in CurrencyType]: string } = {
   usd: "$",
 };
 
+const color = {
+  text: "#000",
+  riseText: "crimson",
+  fallText: "royalblue",
+  tabText: "#787878",
+  tableHeaderBackground: "#fafafa",
+  tableHeaderText: "#808080",
+  symbolText: "#404040",
+  tooltipBackground: "#bdcce8",
+};
+
 function BoardPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [coinMarkets, setCoinMarkets] = useState<CoinMarket[]>([]);
@@ -144,10 +155,14 @@ function BoardPage() {
       <TableContainer>
         <Table>
           <TableHead>
-            <TableRow>
+            <TableRow style={{ backgroundColor: color.tableHeaderBackground }}>
               <TableCell></TableCell>
               {COIN_MARKET_HEADERS.map((header) => (
-                <TableCell key={header.id} align={header.align || "left"}>
+                <TableCell
+                  key={header.id}
+                  align={header.align || "left"}
+                  style={{ fontWeight: "bold", color: color.tableHeaderText }}
+                >
                   {header.label}
                 </TableCell>
               ))}
@@ -194,11 +209,11 @@ interface BoardTableCellProps {
 }
 
 const BoardTableCell = ({ header, value, currency }: BoardTableCellProps) => {
-  let valueColor = "black";
-  let valueFontSize = "16px";
+  let valueColor = color.text;
+  let valueFontSize = "1rem";
   if (header.id === "symbol") {
-    valueColor = "gray";
-    valueFontSize = "14px";
+    valueColor = color.symbolText;
+    valueFontSize = "0.8rem";
   }
   if (header.isCurrency) {
     const symbol = currencySymbols[currency];
@@ -207,8 +222,8 @@ const BoardTableCell = ({ header, value, currency }: BoardTableCellProps) => {
   }
   if (header.isPercentage) {
     const oneDecimal = Math.floor((value as number) * 10) / 10;
-    if (oneDecimal > 0) valueColor = "red";
-    if (oneDecimal < 0) valueColor = "blue";
+    if (oneDecimal > 0) valueColor = color.riseText;
+    if (oneDecimal < 0) valueColor = color.fallText;
     value = oneDecimal + "%";
   }
 
