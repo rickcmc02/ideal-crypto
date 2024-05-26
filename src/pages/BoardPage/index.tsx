@@ -53,6 +53,7 @@ const color = {
 
 function BoardPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [pages, setPages] = useState<number>(1);
   const [coinMarkets, setCoinMarkets] = useState<CoinMarket[]>([]);
   const [coinMarketParams, setCoinMarketParams] = useState<RequestCoinMarkets>({
     vs_currency: "krw",
@@ -67,10 +68,14 @@ function BoardPage() {
 
   useEffect(() => {
     getCoinMarketsOnCoinGecko();
-  }, [coinMarketParams]);
+  }, [coinMarketParams, pages]);
 
   const getCoinMarketsOnCoinGecko = () => {
-    getCoinMarkets(coinMarketParams).then((response) => {
+    const params = {
+      ...coinMarketParams,
+      per_page: coinMarketParams.per_page * pages,
+    };
+    getCoinMarkets(params).then((response) => {
       setCoinMarkets(response as CoinMarket[]);
     });
   };
@@ -86,13 +91,14 @@ function BoardPage() {
       setDropdownAnchorEl(null);
     };
 
-    const selectDropdown = (dropdownId: string, itemId: string | number) => {
+    const selectDropdown = (dropdownId: string, itemValue: string | number) => {
       if (dropdownId === "view_mode") {
-        setViewMode(itemId as ViewMode);
+        setViewMode(itemValue as ViewMode);
       } else {
+        if (dropdownId === "per_page") setPages(1);
         setCoinMarketParams({
           ...coinMarketParams,
-          [dropdownId]: itemId,
+          [dropdownId]: itemValue,
         });
       }
 
@@ -151,17 +157,24 @@ function BoardPage() {
   };
 
   const sectionTable = () => {
+    const viewMoreCoins = () => {
+      setPages(pages + 1);
+    };
+
     return (
       <TableContainer>
         <Table>
           <TableHead>
             <TableRow style={{ backgroundColor: color.tableHeaderBackground }}>
-              <TableCell></TableCell>
+              <TableCell sx={{ p: 1 }}></TableCell>
               {COIN_MARKET_HEADERS.map((header) => (
                 <TableCell
                   key={header.id}
                   align={header.align || "left"}
-                  style={{ fontWeight: "bold", color: color.tableHeaderText }}
+                  style={{
+                    fontWeight: 500,
+                    color: color.tableHeaderText,
+                  }}
                 >
                   {header.label}
                 </TableCell>
@@ -171,7 +184,7 @@ function BoardPage() {
           <TableBody>
             {coinMarkets.map((coinMarket) => (
               <TableRow key={coinMarket.id}>
-                <TableCell>
+                <TableCell sx={{ p: 1 }}>
                   <IconButton>
                     <Star />
                   </IconButton>
@@ -185,6 +198,19 @@ function BoardPage() {
                 ))}
               </TableRow>
             ))}
+            <TableRow>
+              <TableCell
+                colSpan={COIN_MARKET_HEADERS.length + 1}
+                align="center"
+              >
+                <Button
+                  sx={{ color: color.text, fontWeight: 600 }}
+                  onClick={viewMoreCoins}
+                >
+                  + 더보기
+                </Button>
+              </TableCell>
+            </TableRow>
           </TableBody>
         </Table>
       </TableContainer>
