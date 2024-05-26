@@ -57,8 +57,13 @@ const color = {
 };
 
 function BoardPage() {
+  const lsBookmarkIds = localStorage.getItem("bookmarkIds");
+
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [pages, setPages] = useState<number>(1);
+  const [bookmarkIdData, setBookmarkIdData] = useState<{
+    [key in string]: boolean;
+  }>({});
   const [coinMarkets, setCoinMarkets] = useState<CoinMarket[]>([]);
   const [coinMarketParams, setCoinMarketParams] = useState<RequestCoinMarkets>({
     vs_currency: "krw",
@@ -72,18 +77,28 @@ function BoardPage() {
   const dropdownOpen = Boolean(dropdownAnchorEl);
 
   useEffect(() => {
-    getCoinMarketsOnCoinGecko();
-  }, [coinMarketParams, pages]);
+    if (lsBookmarkIds) {
+      const idData: { [key in string]: boolean } = {};
+      lsBookmarkIds.split(",").forEach((id: string) => (idData[id] = true));
+      setBookmarkIdData(idData);
+    }
+  }, [lsBookmarkIds]);
 
-  const getCoinMarketsOnCoinGecko = () => {
+  useEffect(() => {
     const params = {
       ...coinMarketParams,
       per_page: coinMarketParams.per_page * pages,
     };
-    getCoinMarkets(params).then((response) => {
-      setCoinMarkets(response as CoinMarket[]);
-    });
-  };
+    if (viewMode === "bookmark" && lsBookmarkIds) params.ids = lsBookmarkIds;
+
+    getCoinMarkets(params)
+      .then((response) => {
+        setCoinMarkets(response as CoinMarket[]);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }, [coinMarketParams, pages, viewMode]);
 
   const handlePageChange = (page: ViewMode) => {
     setViewMode(page);
@@ -189,6 +204,33 @@ function BoardPage() {
       setPages(pages + 1);
     };
 
+    const starButton = (
+      coinId: string,
+      bmIdData: { [key: string]: boolean }
+    ) => {
+      const starOn = bmIdData[coinId];
+
+      const toggleBookmark = (coinId: string) => {
+        const tmpBMIdData = { ...bmIdData };
+        if (tmpBMIdData[coinId]) delete tmpBMIdData[coinId];
+        else tmpBMIdData[coinId] = true;
+        const strBookmarkIds = Object.keys(tmpBMIdData).join(",");
+        localStorage.setItem("bookmarkIds", strBookmarkIds);
+
+        setBookmarkIdData({ ...tmpBMIdData });
+      };
+
+      return (
+        <IconButton onClick={() => toggleBookmark(coinId)}>
+          <Star
+            sx={{
+              fill: starOn ? color.starOn : color.starOff,
+            }}
+          />
+        </IconButton>
+      );
+    };
+
     return (
       <TableContainer>
         <Table>
@@ -213,9 +255,7 @@ function BoardPage() {
             {coinMarkets.map((coinMarket) => (
               <TableRow key={coinMarket.id}>
                 <TableCell sx={{ p: 1 }}>
-                  <IconButton>
-                    <Star />
-                  </IconButton>
+                  {starButton(coinMarket.id, bookmarkIdData)}
                 </TableCell>
                 {COIN_MARKET_HEADERS.map((header: CoinMarketHeader) => (
                   <BoardTableCell
@@ -226,19 +266,21 @@ function BoardPage() {
                 ))}
               </TableRow>
             ))}
-            <TableRow>
-              <TableCell
-                colSpan={COIN_MARKET_HEADERS.length + 1}
-                align="center"
-              >
-                <Button
-                  sx={{ color: color.text, fontWeight: 600 }}
-                  onClick={viewMoreCoins}
+            {viewMode === "list" && (
+              <TableRow>
+                <TableCell
+                  colSpan={COIN_MARKET_HEADERS.length + 1}
+                  align="center"
                 >
-                  + 더보기
-                </Button>
-              </TableCell>
-            </TableRow>
+                  <Button
+                    sx={{ color: color.text, fontWeight: 600 }}
+                    onClick={viewMoreCoins}
+                  >
+                    + 더보기
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
