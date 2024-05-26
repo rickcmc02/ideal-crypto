@@ -4,6 +4,7 @@ import {
   RequestCoinMarkets,
 } from "models/coin.model";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { getCoinMarkets } from "pages/remotes";
 import {
@@ -57,6 +58,7 @@ const color = {
 };
 
 function BoardPage() {
+  let [searchParams, setUseSearchParams] = useSearchParams();
   const lsBookmarkIds = localStorage.getItem("bookmarkIds");
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -75,6 +77,11 @@ function BoardPage() {
     null
   );
   const dropdownOpen = Boolean(dropdownAnchorEl);
+
+  useEffect(() => {
+    const viewParam = searchParams.get("view") as ViewMode;
+    if (viewParam && viewModes.includes(viewParam)) setViewMode(viewParam);
+  }, [searchParams]);
 
   useEffect(() => {
     if (lsBookmarkIds) {
@@ -97,11 +104,13 @@ function BoardPage() {
       })
       .catch((error) => {
         console.error(error);
+        setCoinMarkets([]);
       });
   }, [coinMarketParams, pages, viewMode]);
 
   const handlePageChange = (page: ViewMode) => {
-    setViewMode(page);
+    searchParams.set("view", page);
+    setUseSearchParams(searchParams);
   };
 
   const sectionTab = () => {
@@ -136,7 +145,7 @@ function BoardPage() {
 
     const selectDropdown = (dropdownId: string, itemValue: string | number) => {
       if (dropdownId === "view_mode") {
-        setViewMode(itemValue as ViewMode);
+        handlePageChange(itemValue as ViewMode);
       } else {
         if (dropdownId === "per_page") setPages(1);
         setCoinMarketParams({
@@ -266,7 +275,7 @@ function BoardPage() {
                 ))}
               </TableRow>
             ))}
-            {viewMode === "list" && (
+            {viewMode === "list" && coinMarkets.length > 0 && (
               <TableRow>
                 <TableCell
                   colSpan={COIN_MARKET_HEADERS.length + 1}
