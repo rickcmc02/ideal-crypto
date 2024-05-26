@@ -13,23 +13,26 @@ import {
 } from "./data";
 
 import {
+  Box,
   Button,
   Container,
   Grid,
   IconButton,
   Menu,
   MenuItem,
+  Tab,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  Tabs,
 } from "@mui/material";
 import { KeyboardArrowDown, KeyboardArrowUp, Star } from "@mui/icons-material";
 
 type ViewMode = "list" | "bookmark";
-
+const viewModes: ViewMode[] = ["list", "bookmark"];
 const viewModeLabels: { [key in ViewMode]: string } = {
   list: "전체보기",
   bookmark: "북마크",
@@ -48,7 +51,9 @@ const color = {
   tableHeaderBackground: "#fafafa",
   tableHeaderText: "#808080",
   symbolText: "#404040",
-  tooltipBackground: "#bdcce8",
+  toastBackground: "#bdcce8",
+  starOn: "#ebb23e",
+  starOff: "#c4c4c4",
 };
 
 function BoardPage() {
@@ -78,6 +83,29 @@ function BoardPage() {
     getCoinMarkets(params).then((response) => {
       setCoinMarkets(response as CoinMarket[]);
     });
+  };
+
+  const handlePageChange = (page: ViewMode) => {
+    setViewMode(page);
+  };
+
+  const sectionTab = () => {
+    const handleTabChange = (e: React.SyntheticEvent, newValue: number) => {
+      handlePageChange(viewModes[newValue] as ViewMode);
+    };
+
+    return (
+      <Box sx={{ width: "100%" }}>
+        <Tabs
+          value={viewModes.indexOf(viewMode) || 0}
+          onChange={handleTabChange}
+          centered
+        >
+          <Tab label="가상자산 시세 목록" />
+          <Tab label={`${viewModeLabels[viewModes[1]]} 목록`} />
+        </Tabs>
+      </Box>
+    );
   };
 
   const sectionController = () => {
@@ -221,6 +249,7 @@ function BoardPage() {
     <div>
       <h1>Board Page</h1>
       <Container>
+        {sectionTab()}
         {sectionController()}
         {sectionTable()}
       </Container>
