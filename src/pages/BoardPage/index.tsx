@@ -4,7 +4,7 @@ import {
   RequestCoinMarkets,
 } from "models/coin.model";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { getCoinMarkets } from "pages/remotes";
 import {
@@ -58,6 +58,7 @@ const color = {
 };
 
 function BoardPage() {
+  const navigate = useNavigate();
   let [searchParams, setUseSearchParams] = useSearchParams();
   const lsBookmarkIds = localStorage.getItem("bookmarkIds");
 
@@ -99,11 +100,12 @@ function BoardPage() {
     if (viewMode === "bookmark" && lsBookmarkIds) params.ids = lsBookmarkIds;
 
     getCoinMarkets(params)
-      .then((response) => {
-        setCoinMarkets(response as CoinMarket[]);
+      .then((res) => {
+        if (res) setCoinMarkets(res as CoinMarket[]);
+        else setCoinMarkets([]);
       })
-      .catch((error) => {
-        console.error(error);
+      .catch((err) => {
+        console.error(err);
         setCoinMarkets([]);
       });
   }, [coinMarketParams, pages, viewMode]);
@@ -240,6 +242,10 @@ function BoardPage() {
       );
     };
 
+    const moveDetailPage = (coinId: string) => {
+      navigate(`/crypto/${coinId}`);
+    };
+
     return (
       <TableContainer>
         <Table>
@@ -262,7 +268,10 @@ function BoardPage() {
           </TableHead>
           <TableBody>
             {coinMarkets.map((coinMarket) => (
-              <TableRow key={coinMarket.id}>
+              <TableRow
+                key={coinMarket.id}
+                onClick={() => moveDetailPage(coinMarket.id)}
+              >
                 <TableCell sx={{ p: 1 }}>
                   {starButton(coinMarket.id, bookmarkIdData)}
                 </TableCell>

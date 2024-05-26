@@ -9,7 +9,7 @@ function App() {
     <div className="App">
       <Routes>
         <Route path="/board" element={<BoardPage />} />
-        <Route path="/crypto" element={<CryptoPage />} />
+        <Route path="/crypto/*" element={<CryptoPage />} />
         <Route path="*" element={<Navigate replace to="/board" />} />
       </Routes>
     </div>
