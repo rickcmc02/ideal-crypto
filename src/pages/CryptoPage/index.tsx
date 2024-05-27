@@ -14,6 +14,7 @@ import {
   TableContainer,
   TableRow,
   Typography,
+  TableBody,
 } from "@mui/material";
 import { CoinInfo, CurrencyType } from "models/coin.model";
 import { useBookmark } from "hooks/useBookmark";
@@ -57,6 +58,25 @@ function CryptoPage() {
     }
   }, []);
 
+  const blockNotNum = (e: React.KeyboardEvent) => {
+    const key = e.key;
+    const isNum = new RegExp("^[0-9.]+$");
+    const permittedKeys = [
+      "Backspace",
+      "Control",
+      "Meta",
+      "c",
+      "v",
+      "ArrowUp",
+      "ArrowDown",
+      "ArrowLeft",
+      "ArrowRight",
+    ];
+    if (permittedKeys.includes(key)) return;
+    if (!isNum.test(key)) {
+      e.preventDefault();
+    }
+  };
   const changeFromCurrency = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     renderCurrency(value, "from");
@@ -68,16 +88,39 @@ function CryptoPage() {
   };
 
   const renderCurrency = (value: string, changed: "from" | "to") => {
-    const removedCommaValue = value.replace(/,/g, "");
+    let renderedValue = value.replace(
+      /[A-Za-z가-힣!@#\$%\^&\*\(\)\-_=+\[\]{};:'"\\|,<>\/?]/g, // 온점을 제외한 모든 문자 제거
+      ""
+    );
+    const dotRegex = new RegExp(/\./g); // 소수점 개수 체크
+    if (
+      renderedValue === "" ||
+      renderedValue === "." ||
+      (value.match(dotRegex) && value.match(dotRegex)!.length > 1)
+    ) {
+      renderedValue = "0";
+    }
+    const eightDigitAfterDot = new RegExp(/\.\d{8,}/); // 소수점 아래 8자리 이상 제거
+    const sliceMoreThanEightAfterDot = (v: string): string => {
+      if (eightDigitAfterDot.test(v))
+        return v.slice(0, v.indexOf(".") + 9) || "";
+      else return v;
+    };
+    renderedValue = sliceMoreThanEightAfterDot(renderedValue);
+
     const currencyValue = coinInfo?.market_data.current_price[currency] || 1;
     if (changed === "from") {
-      setFromCurrency(Number(removedCommaValue).toLocaleString());
-      const exchangedValue = Number(removedCommaValue) * currencyValue;
-      setToCurrency(Number(exchangedValue).toLocaleString());
+      setFromCurrency(renderedValue.toLocaleString());
+      const exchangedValue = sliceMoreThanEightAfterDot(
+        Number(renderedValue) * currencyValue + ""
+      );
+      setToCurrency(exchangedValue.toLocaleString());
     } else {
-      setToCurrency(Number(removedCommaValue).toLocaleString());
-      const exchangedValue = Number(removedCommaValue) / currencyValue;
-      setFromCurrency(Number(exchangedValue).toLocaleString());
+      setToCurrency(renderedValue.toLocaleString());
+      const exchangedValue = sliceMoreThanEightAfterDot(
+        Number(renderedValue) / currencyValue + ""
+      );
+      setFromCurrency(exchangedValue.toLocaleString());
     }
   };
 
@@ -232,8 +275,8 @@ function CryptoPage() {
                         head: coinInfo.symbol.toLocaleUpperCase(),
                         body: (
                           <Input
-                            className="exchange-input"
                             value={fromCurrency}
+                            onKeyDown={blockNotNum}
                             onInput={changeFromCurrency}
                             inputProps={{
                               style: {
@@ -254,6 +297,7 @@ function CryptoPage() {
                         body: (
                           <Input
                             value={toCurrency}
+                            onKeyDown={blockNotNum}
                             onInput={changeToCurrency}
                             inputProps={{ style: { textAlign: "right" } }}
                           />
@@ -341,31 +385,33 @@ const HorizontalTable = ({
   return (
     <TableContainer>
       <Table sx={{ border: "1px solid " + PALETTE.borderColor }}>
-        {contents.map((content, idx) => (
-          <TableRow key={idx}>
-            <TableCell
-              variant="head"
-              sx={{
-                py: isExchange ? 1 : 2,
-                background: PALETTE.tableHeadColor,
-                borderRight: isExchange
-                  ? "2px solid " + PALETTE.borderColor
-                  : "none",
-              }}
-            >
-              <Typography
-                variant="body1"
-                fontSize={isExchange ? "1rem" : "0.9rem"}
-                fontWeight={600}
+        <TableBody>
+          {contents.map((content, idx) => (
+            <TableRow key={idx}>
+              <TableCell
+                variant="head"
+                sx={{
+                  py: isExchange ? 1 : 2,
+                  background: PALETTE.tableHeadColor,
+                  borderRight: isExchange
+                    ? "2px solid " + PALETTE.borderColor
+                    : "none",
+                }}
               >
-                {content.head}
-              </Typography>
-            </TableCell>
-            <TableCell sx={{ py: 1, background: "white" }}>
-              {content.body}
-            </TableCell>
-          </TableRow>
-        ))}
+                <Typography
+                  variant="body1"
+                  fontSize={isExchange ? "1rem" : "0.9rem"}
+                  fontWeight={600}
+                >
+                  {content.head}
+                </Typography>
+              </TableCell>
+              <TableCell sx={{ py: 1, background: "white" }}>
+                {content.body}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
       </Table>
     </TableContainer>
   );
