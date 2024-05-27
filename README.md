@@ -1,46 +1,32 @@
-# Getting Started with Create React App
+## 시작
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+`yarn`
+`yarn start`
 
-## Available Scripts
+## 추가한 라이브러리
 
-In the project directory, you can run:
+`axios` api 호출
+`@emotion/react` `@emotion/styled` `@mui/material` `@mui/icons-material` 스타일링
 
-### `npm start`
+## 추가 기록
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### 소수점
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+[시세 목록] 페이지 과제 이미지에서는 소수점이 더 표기되는 것으로 보이나,
+문제 조건에서 소수점 2자리 제한이 되어 있어 공통 적용하였습니다.
 
-### `npm test`
+### 24H Volume
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+해당 값이 무엇인지 표기되어 있지 않아, `market_cap_change_24h`를 적용하였습니다.
 
-### `npm run build`
+### 페이지 전환
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+페이지 컨텐츠가 전면 변경인 경우 path 변동, 일부 변경인 경우 searchParam으로 처리하였습니다 (시세 / 북마크)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 북마크
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+LocalStorage로 저장하여 관리합니다.
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+전체/북마크 보기 전환시에도 API 호출하도록 설정되어 있습니다.
+현재 리스팅 되어있는 가상자산 시세 목록에 포함되지 않는 북마크 가상자산도 포함하기 위해서,
+또한 데이터 최신화를 위해서 설정하였습니다.
