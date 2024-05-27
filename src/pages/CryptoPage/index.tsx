@@ -14,6 +14,7 @@ import {
   TableContainer,
   TableRow,
   Typography,
+  TableBody,
 } from "@mui/material";
 import { CoinInfo, CurrencyType } from "models/coin.model";
 import { useBookmark } from "hooks/useBookmark";
@@ -21,16 +22,14 @@ import StarButton from "components/button/Star";
 import { SwapHoriz } from "@mui/icons-material";
 import { COIN_MARKET_CONTROLLER, CURRENCY_SYMBOL } from "models/coin.data";
 import DropdownButton from "components/button/Dropdown";
-
-const color = {
-  calculaterBackground: "#d0d0d0",
-  tableHeadColor: "#ebebeb",
-};
+import { PALETTE } from "style/palette";
 
 function CryptoPage() {
   const location = useLocation();
   const bookmark = useBookmark();
 
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isError, setIsError] = useState<boolean>(false);
   const [coinInfo, setCoinInfo] = useState<CoinInfo | null>(null);
   const [fromCurrency, setFromCurrency] = useState<string | number>(1);
   const [toCurrency, setToCurrency] = useState<string | number>(1);
@@ -44,8 +43,11 @@ function CryptoPage() {
     const path = location.pathname;
     if (path) {
       const id = path.split("crypto/")[1];
+      if (isError) setIsError(false);
+      setIsLoading(true);
       getCoinInfo(id)
         .then((res) => {
+          setIsLoading(false);
           if (res) {
             setCoinInfo(res);
             setFromCurrency(1);
@@ -55,32 +57,76 @@ function CryptoPage() {
           }
         })
         .catch((err) => {
+          setIsError(true);
+          setIsLoading(false);
           console.error(err);
           setCoinInfo(null);
         });
     }
   }, []);
 
+  const blockNotNum = (e: React.KeyboardEvent) => {
+    const key = e.key;
+    const isNum = new RegExp("^[0-9.]+$");
+    const permittedKeys = [
+      "Backspace",
+      "Control",
+      "Meta",
+      "c",
+      "v",
+      "ArrowUp",
+      "ArrowDown",
+      "ArrowLeft",
+      "ArrowRight",
+    ];
+    if (permittedKeys.includes(key)) return;
+    if (!isNum.test(key)) {
+      e.preventDefault();
+    }
+  };
+
   const changeFromCurrency = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     renderCurrency(value, "from");
   };
-
   const changeToCurrency = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     renderCurrency(value, "to");
   };
 
   const renderCurrency = (value: string, changed: "from" | "to") => {
-    const removedCommaValue = value.replace(/,/g, "");
+    let renderedValue = value.replace(
+      /[A-Za-z가-힣!@#\$%\^&\*\(\)\-_=+\[\]{};:'"\\|,<>\/?]/g, // 온점을 제외한 모든 문자 제거
+      ""
+    );
+    const dotRegex = new RegExp(/\./g); // 소수점 개수 체크
+    if (
+      renderedValue === "" ||
+      renderedValue === "." ||
+      (value.match(dotRegex) && value.match(dotRegex)!.length > 1)
+    ) {
+      renderedValue = "0";
+    }
+    const eightDigitAfterDot = new RegExp(/\.\d{8,}/); // 소수점 아래 8자리 이상 제거
+    const sliceMoreThanEightAfterDot = (v: string): string => {
+      if (eightDigitAfterDot.test(v))
+        return v.slice(0, v.indexOf(".") + 9) || "";
+      else return v;
+    };
+    renderedValue = sliceMoreThanEightAfterDot(renderedValue);
+
     const currencyValue = coinInfo?.market_data.current_price[currency] || 1;
     if (changed === "from") {
-      setFromCurrency(Number(removedCommaValue).toLocaleString());
-      const exchangedValue = Number(removedCommaValue) * currencyValue;
+      setFromCurrency(Number(renderedValue).toLocaleString());
+      const exchangedValue = sliceMoreThanEightAfterDot(
+        Number(renderedValue) * currencyValue + ""
+      );
       setToCurrency(Number(exchangedValue).toLocaleString());
     } else {
-      setToCurrency(Number(removedCommaValue).toLocaleString());
-      const exchangedValue = Number(removedCommaValue) / currencyValue;
+      setToCurrency(Number(renderedValue).toLocaleString());
+      const exchangedValue = sliceMoreThanEightAfterDot(
+        Number(renderedValue) / currencyValue + ""
+      );
       setFromCurrency(Number(exchangedValue).toLocaleString());
     }
   };
@@ -122,22 +168,32 @@ function CryptoPage() {
               <Grid display="flex" alignItems="center">
                 {starButton(coinInfo.id, bookmarkIdData)}
                 {coinInfo.image?.small && (
-                  <img src={coinInfo.image.small} alt={coinInfo.name} />
+                  <img
+                    src={coinInfo.image.small}
+                    alt={coinInfo.name}
+                    style={{ width: "32px", height: "fit-content" }}
+                  />
                 )}
-                <h2>
+                <Typography
+                  variant="h1"
+                  ml={1.25}
+                  fontSize="1.6rem"
+                  fontWeight={700}
+                  lineHeight={1}
+                >
                   {coinInfo.name}
                   {coinInfo.symbol && (
                     <span style={{ marginLeft: 6, textTransform: "uppercase" }}>
                       ({coinInfo.symbol})
                     </span>
                   )}
-                </h2>
+                </Typography>
               </Grid>
               <Grid>{selectCurrency()}</Grid>
             </Grid>
 
-            <Grid container mt={5}>
-              <Grid item xs={6}>
+            <Grid container mt={3} spacing={2}>
+              <Grid item xs={12} md={6}>
                 <HorizontalTable
                   contents={[
                     {
@@ -151,7 +207,7 @@ function CryptoPage() {
                   ]}
                 />
               </Grid>
-              <Grid item xs={6} container>
+              <Grid item xs={12} md={6} container>
                 <Grid item xs={12} mb={3}>
                   <Grid
                     display="flex"
@@ -165,12 +221,22 @@ function CryptoPage() {
                       mr={2}
                     >
                       {CURRENCY_SYMBOL[currency]}
-                      {coinInfo.market_data.current_price[currency]}
+                      {coinInfo.market_data.current_price[
+                        currency
+                      ].toLocaleString()}
                     </Typography>
-                    {
-                      coinInfo.market_data
-                        .price_change_percentage_1h_in_currency[currency]
-                    }
+                    <Typography
+                      variant="body2"
+                      fontSize="1rem"
+                      fontWeight={600}
+                    >
+                      <PercentageText
+                        value={
+                          coinInfo.market_data
+                            .price_change_percentage_1h_in_currency[currency]
+                        }
+                      />
+                    </Typography>
                   </Grid>
                   <Grid
                     display="flex"
@@ -180,10 +246,14 @@ function CryptoPage() {
                     <Typography variant="body2" color="gray" mr={2}>
                       {(1).toFixed(8)} {coinInfo.symbol}
                     </Typography>
-                    {
-                      coinInfo.market_data
-                        .price_change_percentage_1h_in_currency["usd"]
-                    }
+                    <Typography variant="body2" fontSize="0.8rem" mr={1}>
+                      <PercentageText
+                        value={
+                          coinInfo.market_data
+                            .price_change_percentage_1h_in_currency["usd"]
+                        }
+                      />
+                    </Typography>
                   </Grid>
                 </Grid>
                 <SubCoinInfo
@@ -209,8 +279,13 @@ function CryptoPage() {
               </Grid>
             </Grid>
 
-            <Grid container my={5} p={1.5} bgcolor={color.calculaterBackground}>
-              <Typography variant="body1" fontWeight={600}>
+            <Grid
+              container
+              my={5}
+              p={1.5}
+              bgcolor={PALETTE.calculaterBackground}
+            >
+              <Typography variant="body1" fontSize="0.8rem" fontWeight={600}>
                 가격 계산
               </Typography>
               <Grid container my={2} justifyContent="center">
@@ -221,8 +296,8 @@ function CryptoPage() {
                         head: coinInfo.symbol.toLocaleUpperCase(),
                         body: (
                           <Input
-                            className="exchange-input"
                             value={fromCurrency}
+                            onKeyDown={blockNotNum}
                             onInput={changeFromCurrency}
                             inputProps={{
                               style: {
@@ -243,6 +318,7 @@ function CryptoPage() {
                         body: (
                           <Input
                             value={toCurrency}
+                            onKeyDown={blockNotNum}
                             onInput={changeToCurrency}
                             inputProps={{ style: { textAlign: "right" } }}
                           />
@@ -255,32 +331,55 @@ function CryptoPage() {
               </Grid>
             </Grid>
 
-            <Grid>
-              <Grid textAlign="center">
-                <Button
-                  sx={{ color: "black" }}
-                  onClick={() => setDescriptionOpen(!descriptionOpen)}
-                >
-                  설명보기 {descriptionOpen ? "▲" : "▼"}
-                </Button>
+            {Boolean(coinInfo.description.ko || coinInfo.description.en) && (
+              <Grid>
+                <Grid textAlign="center">
+                  <Button
+                    sx={{ color: PALETTE.text }}
+                    onClick={() => setDescriptionOpen(!descriptionOpen)}
+                  >
+                    설명보기 {descriptionOpen ? "▲" : "▼"}
+                  </Button>
+                </Grid>
+                <Divider sx={{ color: PALETTE.borderColor }} />
+                <Collapse in={descriptionOpen}>
+                  <Typography
+                    variant="body2"
+                    fontSize="0.75rem"
+                    textAlign="left"
+                    whiteSpace={"pre-wrap"}
+                    py={2}
+                  >
+                    {coinInfo.description.ko
+                      ? coinInfo.description.ko
+                      : coinInfo.description.en}
+                  </Typography>
+                </Collapse>
               </Grid>
-              <Divider sx={{ color: "lightgray" }} />
-              <Collapse in={descriptionOpen}>
-                <p>
-                  {coinInfo.description.ko
-                    ? coinInfo.description.ko
-                    : coinInfo.description.en}
-                </p>
-              </Collapse>
-            </Grid>
+            )}
           </div>
         ) : (
-          <p>Loading...</p>
+          <p>
+            {isLoading
+              ? "Loading..."
+              : isError
+              ? "요청 중 오류가 발생하였습니다. 잠시 후 다시 시도해주세요."
+              : "데이터가 없습니다."}
+          </p>
         )}
       </Container>
     </div>
   );
 }
+
+const PercentageText = ({ value }: { value: number }) => {
+  const oneDecimal = Math.floor((value as number) * 10) / 10;
+  let valueColor = PALETTE.text;
+  if (oneDecimal > 0) valueColor = PALETTE.riseText;
+  if (oneDecimal < 0) valueColor = PALETTE.fallText;
+
+  return <span style={{ color: valueColor }}>{oneDecimal}%</span>;
+};
 
 const SubCoinInfo = ({
   contents,
@@ -323,30 +422,34 @@ const HorizontalTable = ({
 }) => {
   return (
     <TableContainer>
-      <Table sx={{ border: "1px solid lightgray" }}>
-        {contents.map((content, idx) => (
-          <TableRow key={idx}>
-            <TableCell
-              variant="head"
-              sx={{
-                py: isExchange ? 1 : 2,
-                background: color.tableHeadColor,
-                borderRight: isExchange ? "2px solid lightgray" : "none",
-              }}
-            >
-              <Typography
-                variant="body1"
-                fontSize={isExchange ? "1rem" : "0.9rem"}
-                fontWeight={600}
+      <Table sx={{ border: "1px solid " + PALETTE.borderColor }}>
+        <TableBody>
+          {contents.map((content, idx) => (
+            <TableRow key={idx}>
+              <TableCell
+                variant="head"
+                sx={{
+                  py: isExchange ? 1 : 2,
+                  background: PALETTE.tableHeadColor,
+                  borderRight: isExchange
+                    ? "2px solid " + PALETTE.borderColor
+                    : "none",
+                }}
               >
-                {content.head}
-              </Typography>
-            </TableCell>
-            <TableCell sx={{ py: 1, background: "white" }}>
-              {content.body}
-            </TableCell>
-          </TableRow>
-        ))}
+                <Typography
+                  variant="body1"
+                  fontSize={isExchange ? "1rem" : "0.9rem"}
+                  fontWeight={600}
+                >
+                  {content.head}
+                </Typography>
+              </TableCell>
+              <TableCell sx={{ py: 1, background: "white" }}>
+                {content.body}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
       </Table>
     </TableContainer>
   );

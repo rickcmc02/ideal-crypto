@@ -11,6 +11,7 @@ export interface RequestCoinMarkets {
   price_change_percentage?: string;
   locale?: string;
   precison?: string;
+  isInit?: boolean;
 }
 
 export interface CoinMarket {

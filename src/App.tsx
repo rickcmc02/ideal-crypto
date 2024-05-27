@@ -1,5 +1,5 @@
 import React from "react";
-import "./sass/app.scss";
+import "./style/app.css";
 import { Navigate, Route, Routes } from "react-router-dom";
 import BoardPage from "./pages/BoardPage";
 import CryptoPage from "./pages/CryptoPage";

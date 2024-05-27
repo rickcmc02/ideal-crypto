@@ -48,7 +48,7 @@ const DropdownButton = ({ item, label, selectFunc }: DropdownButtonProps) => {
         id={item.id}
         aria-label={`select-${item.id}`}
         endIcon={endIcon}
-        sx={{ color: "black" }}
+        sx={{ color: "black", fontWeight: 500 }}
         onClick={handleSelectListButtonClick}
       >
         {label}
@@ -66,6 +66,7 @@ const DropdownButton = ({ item, label, selectFunc }: DropdownButtonProps) => {
           ].items.map((item) => (
             <MenuItem
               key={`${dropdownAnchorEl.id}_${item.value}`}
+              sx={{ fontSize: "0.8rem", fontWeight: 500 }}
               onClick={() => selectDropdown(item.value)}
             >
               {item.label}

@@ -20,40 +20,30 @@ import {
   Button,
   Container,
   Grid,
-  Menu,
-  MenuItem,
-  Tab,
+  LinearProgress,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
 } from "@mui/material";
-import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import StarButton from "components/button/Star";
 import { useBookmark } from "hooks/useBookmark";
 import { COIN_MARKET_CONTROLLER, CURRENCY_SYMBOL } from "models/coin.data";
 import DropdownButton from "components/button/Dropdown";
-
-const color = {
-  text: "#000",
-  riseText: "crimson",
-  fallText: "royalblue",
-  tabText: "#787878",
-  tableHeaderBackground: "#fafafa",
-  tableHeaderText: "#808080",
-  symbolText: "#404040",
-};
+import { PALETTE } from "style/palette";
 
 function BoardPage() {
   const navigate = useNavigate();
   const bookmark = useBookmark();
+  const lsBookmarkIds = localStorage.getItem("bookmarkIds");
+
   let [searchParams, setUseSearchParams] = useSearchParams();
 
+  const [isError, setIsError] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [pages, setPages] = useState<number>(1);
   const [bookmarkIdData, setBookmarkIdData] = useState<{
     [key in string]: boolean;
   }>(bookmark.get());
@@ -62,94 +52,143 @@ function BoardPage() {
     vs_currency: "krw",
     order: "market_cap_desc",
     per_page: 50,
+    page: 1,
     price_change_percentage: "1h,24h,7d",
+    isInit: true,
   });
 
   useEffect(() => {
     const viewParam = searchParams.get("view") as ViewMode;
     if (viewParam && VIEW_MODES.includes(viewParam)) setViewMode(viewParam);
+    else setViewMode("list");
   }, [searchParams]);
 
   useEffect(() => {
+    const tmpCMParmas = { ...coinMarketParams };
+    if (viewMode === "bookmark") {
+      if (lsBookmarkIds) {
+        tmpCMParmas.ids = lsBookmarkIds;
+      } else {
+        if (coinMarkets.length > 0) setCoinMarkets([]);
+        return;
+      }
+    } else {
+      delete tmpCMParmas.ids;
+    }
+    delete tmpCMParmas.isInit;
+    setCoinMarketParams(tmpCMParmas);
+  }, [viewMode]);
+
+  useEffect(() => {
+    getCoinMarketsOnCoinGecko();
+  }, [coinMarketParams]);
+
+  const getCoinMarketsOnCoinGecko = () => {
+    if (coinMarketParams.isInit) return;
+    if (viewMode === "bookmark") {
+      if (!(lsBookmarkIds && coinMarketParams.ids)) return setCoinMarkets([]);
+    }
     const params = {
       ...coinMarketParams,
-      per_page: coinMarketParams.per_page * pages,
+      per_page: coinMarketParams.per_page * (coinMarketParams.page || 1),
+      page: 1, // per_page를 늘리고, CoinGecko API에서 1페이지만 요청 (전체 코인 목록을 새로고침하기 위함)
     };
-    const lsBookmarkIds = localStorage.getItem("bookmarkIds");
-    if (viewMode === "bookmark" && lsBookmarkIds) params.ids = lsBookmarkIds;
 
+    if (isError) setIsError(false);
+    setIsLoading(true);
     getCoinMarkets(params)
       .then((res) => {
+        setIsLoading(false);
         if (res) setCoinMarkets(res as CoinMarket[]);
         else setCoinMarkets([]);
       })
       .catch((err) => {
         console.error(err);
+        setIsLoading(false);
+        if (err.code === "ERR_NETWORK") setIsError(true);
         setCoinMarkets([]);
       });
-  }, [coinMarketParams, pages, viewMode]);
+  };
 
   const handlePageChange = (page: ViewMode) => {
     searchParams.set("view", page);
     setUseSearchParams(searchParams);
   };
 
-  const sectionTab = () => {
-    const handleTabChange = (e: React.SyntheticEvent, newValue: number) => {
-      handlePageChange(VIEW_MODES[newValue] as ViewMode);
-    };
-
-    return (
-      <Box sx={{ width: "100%" }}>
-        <Tabs
-          value={VIEW_MODES.indexOf(viewMode) || 0}
-          onChange={handleTabChange}
-          centered
-        >
-          <Tab label="가상자산 시세 목록" />
-          <Tab label={`${VIEW_MODE_LABELS[VIEW_MODES[1]]} 목록`} />
-        </Tabs>
-      </Box>
-    );
+  const commonSx = {
+    width: "50%",
+    py: 1.25,
+    borderRadius: "4px",
+    fontSize: "1rem",
+    fontWeight: 700,
   };
+  const activeSx = {
+    ...commonSx,
+    boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
+    bgcolor: "white",
+    color: PALETTE.text,
+  };
+  const inactiveSx = {
+    ...commonSx,
+    bgcolor: PALETTE.tabBackground,
+    color: PALETTE.tabText,
+  };
+  const sectionTab = (
+    <Box sx={{ width: "100%" }}>
+      <Button
+        sx={viewMode === "list" ? activeSx : inactiveSx}
+        onClick={() => handlePageChange("list")}
+      >
+        가상자산 시세 목록
+      </Button>
+      <Button
+        sx={viewMode === "bookmark" ? activeSx : inactiveSx}
+        onClick={() => handlePageChange("bookmark")}
+      >
+        {VIEW_MODE_LABELS[VIEW_MODES[1]]} 목록
+      </Button>
+    </Box>
+  );
 
-  const sectionController = () => {
-    return (
-      <Grid container display="flex" justifyContent="flex-end">
-        {Object.values(COIN_MARKET_CONTROLLER).map((controllerItem) => {
-          const conId = controllerItem.id;
-          const selectDropdown = (value: string | number) => {
-            if (conId === "view_mode") {
-              handlePageChange(value as ViewMode);
-            } else {
-              if (conId === "per_page") setPages(1);
-              setCoinMarketParams({
-                ...coinMarketParams,
-                [conId]: value,
-              });
+  const sectionController = (
+    <Grid container display="flex" justifyContent="flex-end">
+      {Object.values(COIN_MARKET_CONTROLLER).map((controllerItem) => {
+        const conId = controllerItem.id;
+        const selectDropdown = (value: string | number) => {
+          if (conId === "view_mode") {
+            handlePageChange(value as ViewMode);
+          } else {
+            setCoinMarketParams({
+              ...coinMarketParams,
+              [conId]: value,
+              page: conId === "per_page" ? 1 : coinMarketParams.page,
+            });
+          }
+        };
+
+        return (
+          <DropdownButton
+            key={conId}
+            item={controllerItem}
+            selectFunc={selectDropdown}
+            label={
+              conId === "view_mode"
+                ? VIEW_MODE_LABELS[viewMode]
+                : coinMarketParams[conId as keyof RequestCoinMarkets] +
+                  (controllerItem.addedLabel || "")
             }
-          };
-
-          return (
-            <DropdownButton
-              item={controllerItem}
-              selectFunc={selectDropdown}
-              label={
-                conId === "view_mode"
-                  ? VIEW_MODE_LABELS[viewMode]
-                  : coinMarketParams[conId as keyof RequestCoinMarkets] +
-                    (controllerItem.addedLabel || "")
-              }
-            />
-          );
-        })}
-      </Grid>
-    );
-  };
+          />
+        );
+      })}
+    </Grid>
+  );
 
   const sectionTable = () => {
     const viewMoreCoins = () => {
-      setPages(pages + 1);
+      setCoinMarketParams({
+        ...coinMarketParams,
+        page: coinMarketParams.page ? coinMarketParams.page + 1 : 2,
+      });
     };
 
     const starButton = (
@@ -173,17 +212,21 @@ function BoardPage() {
 
     return (
       <TableContainer>
+        {isLoading && <LinearProgress sx={{ mb: -0.5 }} />}
         <Table>
           <TableHead>
-            <TableRow style={{ backgroundColor: color.tableHeaderBackground }}>
+            <TableRow
+              style={{ backgroundColor: PALETTE.tableHeaderBackground }}
+            >
               <TableCell sx={{ p: 1 }}></TableCell>
               {COIN_MARKET_HEADERS.map((header) => (
                 <TableCell
                   key={header.id}
                   align={header.align || "left"}
-                  style={{
-                    fontWeight: 500,
-                    color: color.tableHeaderText,
+                  sx={{
+                    py: 1,
+                    fontWeight: 600,
+                    color: PALETTE.tableHeaderText,
                   }}
                 >
                   {header.label}
@@ -192,32 +235,54 @@ function BoardPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {coinMarkets.map((coinMarket) => (
-              <TableRow
-                key={coinMarket.id}
-                onClick={() => moveDetailPage(coinMarket.id)}
-              >
-                <TableCell sx={{ p: 1 }}>
-                  {starButton(coinMarket.id, bookmarkIdData)}
+            {isError ? (
+              <TableRow>
+                <TableCell
+                  colSpan={COIN_MARKET_HEADERS.length + 1}
+                  sx={{ textAlign: "center", fontWeight: 600 }}
+                >
+                  요청 중 오류가 발생하였습니다. 잠시 후 다시 시도해주세요.
                 </TableCell>
-                {COIN_MARKET_HEADERS.map((header: CoinMarketHeader) => (
-                  <BoardTableCell
-                    key={header.id}
-                    header={header}
-                    value={coinMarket[header.id]}
-                    currency={coinMarketParams.vs_currency}
-                  />
-                ))}
               </TableRow>
-            ))}
+            ) : coinMarkets.length > 0 ? (
+              coinMarkets.map((coinMarket) => (
+                <TableRow
+                  key={coinMarket.id}
+                  onClick={() => moveDetailPage(coinMarket.id)}
+                >
+                  <TableCell sx={{ p: 1 }}>
+                    {starButton(coinMarket.id, bookmarkIdData)}
+                  </TableCell>
+                  {COIN_MARKET_HEADERS.map((header: CoinMarketHeader) => (
+                    <BoardTableCell
+                      key={header.id}
+                      header={header}
+                      value={coinMarket[header.id]}
+                      currency={coinMarketParams.vs_currency}
+                    />
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={COIN_MARKET_HEADERS.length + 1}
+                  sx={{ textAlign: "center", fontWeight: 600 }}
+                >
+                  {viewMode === "bookmark" && "북마크 "}데이터가 없습니다.
+                </TableCell>
+              </TableRow>
+            )}
+
             {viewMode === "list" && coinMarkets.length > 0 && (
               <TableRow>
                 <TableCell
                   colSpan={COIN_MARKET_HEADERS.length + 1}
                   align="center"
+                  sx={{ p: 1 }}
                 >
                   <Button
-                    sx={{ color: color.text, fontWeight: 600 }}
+                    sx={{ color: PALETTE.text, fontWeight: 600 }}
                     onClick={viewMoreCoins}
                   >
                     + 더보기
@@ -235,9 +300,13 @@ function BoardPage() {
     <div>
       <h1>Board Page</h1>
       <Container>
-        {sectionTab()}
-        {sectionController()}
-        {sectionTable()}
+        <Grid container rowGap={2} py={5}>
+          {sectionTab}
+          <Grid container height={32}>
+            {viewMode === "list" && sectionController}
+          </Grid>
+          {sectionTable()}
+        </Grid>
       </Container>
     </div>
   );
@@ -250,10 +319,10 @@ interface BoardTableCellProps {
 }
 
 const BoardTableCell = ({ header, value, currency }: BoardTableCellProps) => {
-  let valueColor = color.text;
+  let valueColor = PALETTE.text;
   let valueFontSize = "1rem";
   if (header.id === "symbol") {
-    valueColor = color.symbolText;
+    valueColor = PALETTE.symbolText;
     valueFontSize = "0.8rem";
   }
   if (header.isCurrency) {
@@ -263,8 +332,8 @@ const BoardTableCell = ({ header, value, currency }: BoardTableCellProps) => {
   }
   if (header.isPercentage) {
     const oneDecimal = Math.floor((value as number) * 10) / 10;
-    if (oneDecimal > 0) valueColor = color.riseText;
-    if (oneDecimal < 0) valueColor = color.fallText;
+    if (oneDecimal > 0) valueColor = PALETTE.riseText;
+    if (oneDecimal < 0) valueColor = PALETTE.fallText;
     value = oneDecimal + "%";
   }
 
