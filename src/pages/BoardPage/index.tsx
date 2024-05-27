@@ -18,7 +18,6 @@ import {
   Button,
   Container,
   Grid,
-  IconButton,
   Menu,
   MenuItem,
   Tab,
@@ -31,6 +30,8 @@ import {
   Tabs,
 } from "@mui/material";
 import { KeyboardArrowDown, KeyboardArrowUp, Star } from "@mui/icons-material";
+import StarButton from "components/button/Star";
+import { useBookmark } from "hooks/useBookmark";
 
 type ViewMode = "list" | "bookmark";
 const viewModes: ViewMode[] = ["list", "bookmark"];
@@ -52,21 +53,18 @@ const color = {
   tableHeaderBackground: "#fafafa",
   tableHeaderText: "#808080",
   symbolText: "#404040",
-  toastBackground: "#bdcce8",
-  starOn: "#ebb23e",
-  starOff: "#c4c4c4",
 };
 
 function BoardPage() {
   const navigate = useNavigate();
+  const bookmark = useBookmark();
   let [searchParams, setUseSearchParams] = useSearchParams();
-  const lsBookmarkIds = localStorage.getItem("bookmarkIds");
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [pages, setPages] = useState<number>(1);
   const [bookmarkIdData, setBookmarkIdData] = useState<{
     [key in string]: boolean;
-  }>({});
+  }>(bookmark.get());
   const [coinMarkets, setCoinMarkets] = useState<CoinMarket[]>([]);
   const [coinMarketParams, setCoinMarketParams] = useState<RequestCoinMarkets>({
     vs_currency: "krw",
@@ -85,18 +83,11 @@ function BoardPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (lsBookmarkIds) {
-      const idData: { [key in string]: boolean } = {};
-      lsBookmarkIds.split(",").forEach((id: string) => (idData[id] = true));
-      setBookmarkIdData(idData);
-    }
-  }, [lsBookmarkIds]);
-
-  useEffect(() => {
     const params = {
       ...coinMarketParams,
       per_page: coinMarketParams.per_page * pages,
     };
+    const lsBookmarkIds = localStorage.getItem("bookmarkIds");
     if (viewMode === "bookmark" && lsBookmarkIds) params.ids = lsBookmarkIds;
 
     getCoinMarkets(params)
@@ -222,23 +213,11 @@ function BoardPage() {
       const starOn = bmIdData[coinId];
 
       const toggleBookmark = (coinId: string) => {
-        const tmpBMIdData = { ...bmIdData };
-        if (tmpBMIdData[coinId]) delete tmpBMIdData[coinId];
-        else tmpBMIdData[coinId] = true;
-        const strBookmarkIds = Object.keys(tmpBMIdData).join(",");
-        localStorage.setItem("bookmarkIds", strBookmarkIds);
-
-        setBookmarkIdData({ ...tmpBMIdData });
+        setBookmarkIdData({ ...bookmark.set(coinId, bmIdData) });
       };
 
       return (
-        <IconButton onClick={() => toggleBookmark(coinId)}>
-          <Star
-            sx={{
-              fill: starOn ? color.starOn : color.starOff,
-            }}
-          />
-        </IconButton>
+        <StarButton starOn={starOn} action={() => toggleBookmark(coinId)} />
       );
     };
 
@@ -277,6 +256,7 @@ function BoardPage() {
                 </TableCell>
                 {COIN_MARKET_HEADERS.map((header: CoinMarketHeader) => (
                   <BoardTableCell
+                    key={header.id}
                     header={header}
                     value={coinMarket[header.id]}
                     currency={coinMarketParams.vs_currency}
@@ -350,7 +330,7 @@ const BoardTableCell = ({ header, value, currency }: BoardTableCellProps) => {
   };
 
   return (
-    <TableCell key={header.id} align={header.align || "left"} style={cellStyle}>
+    <TableCell align={header.align || "left"} style={cellStyle}>
       {value}
     </TableCell>
   );

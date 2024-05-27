@@ -4,10 +4,17 @@ import { useLocation } from "react-router-dom";
 
 import { Container, Grid } from "@mui/material";
 import { CoinInfo } from "models/coin.model";
+import { useBookmark } from "hooks/useBookmark";
+import StarButton from "components/button/Star";
 
 function CryptoPage() {
   const location = useLocation();
+  const bookmark = useBookmark();
+
   const [coinInfo, setCoinInfo] = useState<CoinInfo | null>(null);
+  const [bookmarkIdData, setBookmarkIdData] = useState<{
+    [key in string]: boolean;
+  }>(bookmark.get());
 
   useEffect(() => {
     const path = location.pathname;
@@ -25,6 +32,16 @@ function CryptoPage() {
     }
   }, []);
 
+  const starButton = (coinId: string, bmIdData: { [key: string]: boolean }) => {
+    const starOn = bmIdData[coinId];
+
+    const toggleBookmark = (coinId: string) => {
+      setBookmarkIdData({ ...bookmark.set(coinId, bmIdData) });
+    };
+
+    return <StarButton starOn={starOn} action={() => toggleBookmark(coinId)} />;
+  };
+
   return (
     <div>
       <h1>Crypto Page</h1>
@@ -32,6 +49,7 @@ function CryptoPage() {
         {coinInfo ? (
           <div>
             <h2>
+              {starButton(coinInfo.id, bookmarkIdData)}
               <img src={coinInfo.image.small} alt={coinInfo.name} />
               {coinInfo.name}
               {coinInfo.symbol && (
