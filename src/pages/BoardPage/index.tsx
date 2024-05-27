@@ -41,7 +41,6 @@ function BoardPage() {
 
   let [searchParams, setUseSearchParams] = useSearchParams();
 
-  const [isInit, setIsInit] = useState<boolean>(true);
   const [isError, setIsError] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -55,38 +54,45 @@ function BoardPage() {
     per_page: 50,
     page: 1,
     price_change_percentage: "1h,24h,7d",
+    isInit: true,
   });
 
   useEffect(() => {
     const viewParam = searchParams.get("view") as ViewMode;
-    if (viewParam && VIEW_MODES.includes(viewParam)) {
-      setViewMode(viewParam);
-      if (viewParam === "bookmark") {
-        getCoinMarketsOnCoinGecko(lsBookmarkIds || "");
-      } else {
-        getCoinMarketsOnCoinGecko();
-      }
-    } else {
-      getCoinMarketsOnCoinGecko();
-    }
+    if (viewParam && VIEW_MODES.includes(viewParam)) setViewMode(viewParam);
+    else setViewMode("list");
   }, [searchParams]);
 
   useEffect(() => {
-    if (!isInit) {
-      if (viewMode === "bookmark")
-        getCoinMarketsOnCoinGecko(lsBookmarkIds || "");
-      else getCoinMarketsOnCoinGecko();
+    const tmpCMParmas = { ...coinMarketParams };
+    if (viewMode === "bookmark") {
+      if (lsBookmarkIds) {
+        tmpCMParmas.ids = lsBookmarkIds;
+      } else {
+        if (coinMarkets.length > 0) setCoinMarkets([]);
+        return;
+      }
+    } else {
+      delete tmpCMParmas.ids;
     }
-  }, [coinMarketParams, viewMode]);
+    delete tmpCMParmas.isInit;
+    setCoinMarketParams(tmpCMParmas);
+  }, [viewMode]);
 
-  const getCoinMarketsOnCoinGecko = (bmIds?: string) => {
-    if (isInit) setTimeout(() => setIsInit(false), 1000);
+  useEffect(() => {
+    getCoinMarketsOnCoinGecko();
+  }, [coinMarketParams]);
+
+  const getCoinMarketsOnCoinGecko = () => {
+    if (coinMarketParams.isInit) return;
+    if (viewMode === "bookmark") {
+      if (!(lsBookmarkIds && coinMarketParams.ids)) return setCoinMarkets([]);
+    }
     const params = {
       ...coinMarketParams,
       per_page: coinMarketParams.per_page * (coinMarketParams.page || 1),
       page: 1, // per_page를 늘리고, CoinGecko API에서 1페이지만 요청 (전체 코인 목록을 새로고침하기 위함)
     };
-    if (bmIds) params.ids = bmIds;
 
     setIsError(false);
     setIsLoading(true);
@@ -238,7 +244,7 @@ function BoardPage() {
                   요청 중 오류가 발생하였습니다. 잠시 후 다시 시도해주세요.
                 </TableCell>
               </TableRow>
-            ) : (
+            ) : coinMarkets.length > 0 ? (
               coinMarkets.map((coinMarket) => (
                 <TableRow
                   key={coinMarket.id}
@@ -257,6 +263,15 @@ function BoardPage() {
                   ))}
                 </TableRow>
               ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={COIN_MARKET_HEADERS.length + 1}
+                  sx={{ textAlign: "center", fontWeight: 600 }}
+                >
+                  {viewMode === "bookmark" && "북마크 "}데이터가 없습니다.
+                </TableCell>
+              </TableRow>
             )}
 
             {viewMode === "list" && coinMarkets.length > 0 && (
