@@ -1,5 +1,3 @@
-import { useMemo } from "react";
-
 export function useBookmark() {
   const lsBookmarkIds = localStorage.getItem("bookmarkIds");
 

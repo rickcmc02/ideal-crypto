@@ -20,14 +20,13 @@ import {
   Button,
   Container,
   Grid,
-  Tab,
+  LinearProgress,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Tabs,
 } from "@mui/material";
 import StarButton from "components/button/Star";
 import { useBookmark } from "hooks/useBookmark";
@@ -38,8 +37,13 @@ import { PALETTE } from "style/palette";
 function BoardPage() {
   const navigate = useNavigate();
   const bookmark = useBookmark();
+  const lsBookmarkIds = localStorage.getItem("bookmarkIds");
+
   let [searchParams, setUseSearchParams] = useSearchParams();
 
+  const [isInit, setIsInit] = useState<boolean>(true);
+  const [isError, setIsError] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [pages, setPages] = useState<number>(1);
   const [bookmarkIdData, setBookmarkIdData] = useState<{
@@ -55,85 +59,122 @@ function BoardPage() {
 
   useEffect(() => {
     const viewParam = searchParams.get("view") as ViewMode;
-    if (viewParam && VIEW_MODES.includes(viewParam)) setViewMode(viewParam);
+    if (viewParam && VIEW_MODES.includes(viewParam)) {
+      setViewMode(viewParam);
+      if (viewParam === "bookmark") {
+        getCoinMarketsOnCoinGecko(lsBookmarkIds || "");
+      } else {
+        getCoinMarketsOnCoinGecko();
+      }
+    } else {
+      getCoinMarketsOnCoinGecko();
+    }
   }, [searchParams]);
 
   useEffect(() => {
+    if (!isInit) {
+      if (viewMode === "bookmark")
+        getCoinMarketsOnCoinGecko(lsBookmarkIds || "");
+      else getCoinMarketsOnCoinGecko();
+    }
+  }, [coinMarketParams, viewMode]);
+
+  const getCoinMarketsOnCoinGecko = (bmIds?: string) => {
+    if (isInit) setTimeout(() => setIsInit(false), 1000);
     const params = {
       ...coinMarketParams,
       per_page: coinMarketParams.per_page * pages,
     };
-    const lsBookmarkIds = localStorage.getItem("bookmarkIds");
-    if (viewMode === "bookmark" && lsBookmarkIds) params.ids = lsBookmarkIds;
+    if (bmIds) params.ids = bmIds;
 
+    setIsError(false);
+    setIsLoading(true);
     getCoinMarkets(params)
       .then((res) => {
+        setIsLoading(false);
         if (res) setCoinMarkets(res as CoinMarket[]);
         else setCoinMarkets([]);
       })
       .catch((err) => {
         console.error(err);
+        setIsLoading(false);
+        if (err.code === "ERR_NETWORK") setIsError(true);
         setCoinMarkets([]);
       });
-  }, [coinMarketParams, pages, viewMode]);
+  };
 
   const handlePageChange = (page: ViewMode) => {
     searchParams.set("view", page);
     setUseSearchParams(searchParams);
   };
 
-  const sectionTab = () => {
-    const handleTabChange = (e: React.SyntheticEvent, newValue: number) => {
-      handlePageChange(VIEW_MODES[newValue] as ViewMode);
-    };
-
-    return (
-      <Box sx={{ width: "100%" }}>
-        <Tabs
-          value={VIEW_MODES.indexOf(viewMode) || 0}
-          onChange={handleTabChange}
-          centered
-        >
-          <Tab label="가상자산 시세 목록" />
-          <Tab label={`${VIEW_MODE_LABELS[VIEW_MODES[1]]} 목록`} />
-        </Tabs>
-      </Box>
-    );
+  const commonSx = {
+    width: "50%",
+    py: 1.25,
+    borderRadius: "4px",
+    fontSize: "1rem",
+    fontWeight: 700,
   };
+  const activeSx = {
+    ...commonSx,
+    boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
+    bgcolor: "white",
+    color: PALETTE.text,
+  };
+  const inactiveSx = {
+    ...commonSx,
+    bgcolor: PALETTE.tabBackground,
+    color: PALETTE.tabText,
+  };
+  const sectionTab = (
+    <Box sx={{ width: "100%" }}>
+      <Button
+        sx={viewMode === "list" ? activeSx : inactiveSx}
+        onClick={() => handlePageChange("list")}
+      >
+        가상자산 시세 목록
+      </Button>
+      <Button
+        sx={viewMode === "bookmark" ? activeSx : inactiveSx}
+        onClick={() => handlePageChange("bookmark")}
+      >
+        {VIEW_MODE_LABELS[VIEW_MODES[1]]} 목록
+      </Button>
+    </Box>
+  );
 
-  const sectionController = () => {
-    return (
-      <Grid container display="flex" justifyContent="flex-end">
-        {Object.values(COIN_MARKET_CONTROLLER).map((controllerItem) => {
-          const conId = controllerItem.id;
-          const selectDropdown = (value: string | number) => {
-            if (conId === "view_mode") {
-              handlePageChange(value as ViewMode);
-            } else {
-              if (conId === "per_page") setPages(1);
-              setCoinMarketParams({
-                ...coinMarketParams,
-                [conId]: value,
-              });
+  const sectionController = (
+    <Grid container display="flex" justifyContent="flex-end">
+      {Object.values(COIN_MARKET_CONTROLLER).map((controllerItem) => {
+        const conId = controllerItem.id;
+        const selectDropdown = (value: string | number) => {
+          if (conId === "view_mode") {
+            handlePageChange(value as ViewMode);
+          } else {
+            if (conId === "per_page") setPages(1);
+            setCoinMarketParams({
+              ...coinMarketParams,
+              [conId]: value,
+            });
+          }
+        };
+
+        return (
+          <DropdownButton
+            key={conId}
+            item={controllerItem}
+            selectFunc={selectDropdown}
+            label={
+              conId === "view_mode"
+                ? VIEW_MODE_LABELS[viewMode]
+                : coinMarketParams[conId as keyof RequestCoinMarkets] +
+                  (controllerItem.addedLabel || "")
             }
-          };
-
-          return (
-            <DropdownButton
-              item={controllerItem}
-              selectFunc={selectDropdown}
-              label={
-                conId === "view_mode"
-                  ? VIEW_MODE_LABELS[viewMode]
-                  : coinMarketParams[conId as keyof RequestCoinMarkets] +
-                    (controllerItem.addedLabel || "")
-              }
-            />
-          );
-        })}
-      </Grid>
-    );
-  };
+          />
+        );
+      })}
+    </Grid>
+  );
 
   const sectionTable = () => {
     const viewMoreCoins = () => {
@@ -161,6 +202,7 @@ function BoardPage() {
 
     return (
       <TableContainer>
+        {isLoading && <LinearProgress sx={{ mb: -0.5 }} />}
         <Table>
           <TableHead>
             <TableRow
@@ -171,8 +213,9 @@ function BoardPage() {
                 <TableCell
                   key={header.id}
                   align={header.align || "left"}
-                  style={{
-                    fontWeight: 500,
+                  sx={{
+                    py: 1,
+                    fontWeight: 600,
                     color: PALETTE.tableHeaderText,
                   }}
                 >
@@ -182,29 +225,42 @@ function BoardPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {coinMarkets.map((coinMarket) => (
-              <TableRow
-                key={coinMarket.id}
-                onClick={() => moveDetailPage(coinMarket.id)}
-              >
-                <TableCell sx={{ p: 1 }}>
-                  {starButton(coinMarket.id, bookmarkIdData)}
+            {isError ? (
+              <TableRow>
+                <TableCell
+                  colSpan={COIN_MARKET_HEADERS.length + 1}
+                  sx={{ p: 1, textAlign: "center" }}
+                >
+                  요청 중 오류가 발생하였습니다. 잠시 후 다시 시도해주세요.
                 </TableCell>
-                {COIN_MARKET_HEADERS.map((header: CoinMarketHeader) => (
-                  <BoardTableCell
-                    key={header.id}
-                    header={header}
-                    value={coinMarket[header.id]}
-                    currency={coinMarketParams.vs_currency}
-                  />
-                ))}
               </TableRow>
-            ))}
+            ) : (
+              coinMarkets.map((coinMarket) => (
+                <TableRow
+                  key={coinMarket.id}
+                  onClick={() => moveDetailPage(coinMarket.id)}
+                >
+                  <TableCell sx={{ p: 1 }}>
+                    {starButton(coinMarket.id, bookmarkIdData)}
+                  </TableCell>
+                  {COIN_MARKET_HEADERS.map((header: CoinMarketHeader) => (
+                    <BoardTableCell
+                      key={header.id}
+                      header={header}
+                      value={coinMarket[header.id]}
+                      currency={coinMarketParams.vs_currency}
+                    />
+                  ))}
+                </TableRow>
+              ))
+            )}
+
             {viewMode === "list" && coinMarkets.length > 0 && (
               <TableRow>
                 <TableCell
                   colSpan={COIN_MARKET_HEADERS.length + 1}
                   align="center"
+                  sx={{ p: 1 }}
                 >
                   <Button
                     sx={{ color: PALETTE.text, fontWeight: 600 }}
@@ -225,9 +281,13 @@ function BoardPage() {
     <div>
       <h1>Board Page</h1>
       <Container>
-        {sectionTab()}
-        {sectionController()}
-        {sectionTable()}
+        <Grid container rowGap={2} py={5}>
+          {sectionTab}
+          <Grid container height={32}>
+            {viewMode === "list" && sectionController}
+          </Grid>
+          {sectionTable()}
+        </Grid>
       </Container>
     </div>
   );

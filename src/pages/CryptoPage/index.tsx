@@ -142,7 +142,7 @@ function CryptoPage() {
               <Grid>{selectCurrency()}</Grid>
             </Grid>
 
-            <Grid container mt={5}>
+            <Grid container mt={5} columnSpacing={2}>
               <Grid item xs={6}>
                 <HorizontalTable
                   contents={[
@@ -277,11 +277,17 @@ function CryptoPage() {
               </Grid>
               <Divider sx={{ color: PALETTE.borderColor }} />
               <Collapse in={descriptionOpen}>
-                <p>
+                <Typography
+                  variant="body2"
+                  fontSize="0.75rem"
+                  textAlign="left"
+                  whiteSpace={"pre-wrap"}
+                  py={2}
+                >
                   {coinInfo.description.ko
                     ? coinInfo.description.ko
                     : coinInfo.description.en}
-                </p>
+                </Typography>
               </Collapse>
             </Grid>
           </div>

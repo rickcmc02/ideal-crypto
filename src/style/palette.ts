@@ -3,6 +3,7 @@ export const PALETTE = {
   riseText: "crimson",
   fallText: "royalblue",
   tabText: "#787878",
+  tabBackground: "#f0f0f0",
   tableHeaderBackground: "#fafafa",
   tableHeaderText: "#808080",
   symbolText: "#404040",
