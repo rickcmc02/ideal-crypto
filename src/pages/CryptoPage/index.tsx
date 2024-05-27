@@ -5,20 +5,26 @@ import { useLocation } from "react-router-dom";
 import {
   Button,
   Container,
+  Collapse,
+  Divider,
   Grid,
   Input,
   Table,
   TableCell,
   TableContainer,
   TableRow,
+  Typography,
 } from "@mui/material";
-import { CoinInfo } from "models/coin.model";
+import { CoinInfo, CurrencyType } from "models/coin.model";
 import { useBookmark } from "hooks/useBookmark";
 import StarButton from "components/button/Star";
 import { SwapHoriz } from "@mui/icons-material";
+import { COIN_MARKET_CONTROLLER, CURRENCY_SYMBOL } from "models/coin.data";
+import DropdownButton from "components/button/Dropdown";
 
 const color = {
   calculaterBackground: "#d0d0d0",
+  tableHeadColor: "#ebebeb",
 };
 
 function CryptoPage() {
@@ -28,9 +34,11 @@ function CryptoPage() {
   const [coinInfo, setCoinInfo] = useState<CoinInfo | null>(null);
   const [fromCurrency, setFromCurrency] = useState<string | number>(1);
   const [toCurrency, setToCurrency] = useState<string | number>(1);
+  const [currency, setCurrency] = useState<CurrencyType>("krw");
   const [bookmarkIdData, setBookmarkIdData] = useState<{
     [key in string]: boolean;
   }>(bookmark.get());
+  const [descriptionOpen, setDescriptionOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const path = location.pathname;
@@ -41,7 +49,7 @@ function CryptoPage() {
           if (res) {
             setCoinInfo(res);
             setFromCurrency(1);
-            setToCurrency(res.market_data.current_price["usd"] || 1);
+            setToCurrency(res.market_data.current_price[currency] || 1);
           } else {
             setCoinInfo(null);
           }
@@ -65,7 +73,7 @@ function CryptoPage() {
 
   const renderCurrency = (value: string, changed: "from" | "to") => {
     const removedCommaValue = value.replace(/,/g, "");
-    const currencyValue = coinInfo?.market_data.current_price["usd"] || 1;
+    const currencyValue = coinInfo?.market_data.current_price[currency] || 1;
     if (changed === "from") {
       setFromCurrency(Number(removedCommaValue).toLocaleString());
       const exchangedValue = Number(removedCommaValue) * currencyValue;
@@ -85,6 +93,23 @@ function CryptoPage() {
     };
 
     return <StarButton starOn={starOn} action={() => toggleBookmark(coinId)} />;
+  };
+
+  const selectCurrency = () => {
+    const controllerItem = COIN_MARKET_CONTROLLER["vs_currency"];
+
+    const buttonLabel = currency + (controllerItem.addedLabel || "");
+    const selectDropdown = (value: string | number) => {
+      setCurrency(value as CurrencyType);
+    };
+
+    return (
+      <DropdownButton
+        item={controllerItem}
+        label={buttonLabel}
+        selectFunc={selectDropdown}
+      />
+    );
   };
 
   return (
@@ -108,100 +133,145 @@ function CryptoPage() {
                   )}
                 </h2>
               </Grid>
-              <Grid>USD 보기</Grid>
+              <Grid>{selectCurrency()}</Grid>
             </Grid>
 
             <Grid container mt={5}>
               <Grid item xs={6}>
-                <TableContainer>
-                  <Table>
-                    <TableRow>
-                      <TableCell variant="head">시가총액 Rank</TableCell>
-                      <TableCell>Rank #{coinInfo.market_cap_rank}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell variant="head">웹사이트</TableCell>
-                      <TableCell>
-                        {new URL(coinInfo.links.homepage[0]).hostname}
-                      </TableCell>
-                    </TableRow>
-                  </Table>
-                </TableContainer>
+                <HorizontalTable
+                  contents={[
+                    {
+                      head: "시가총액 Rank",
+                      body: `Rank #${coinInfo.market_cap_rank}`,
+                    },
+                    {
+                      head: "웹사이트",
+                      body: new URL(coinInfo.links.homepage[0]).hostname,
+                    },
+                  ]}
+                />
               </Grid>
               <Grid item xs={6} container>
-                <Grid item xs={12} display="flex" justifyContent="flex-end">
-                  {coinInfo.market_data.current_price["usd"]}
-                  <br />
-                  {
-                    coinInfo.market_data.price_change_percentage_1h_in_currency[
-                      "usd"
-                    ]
-                  }
-                </Grid>
-                <Grid
-                  item
-                  xs={6}
-                  display="flex"
-                  flexDirection="column"
-                  alignItems="flex-end"
-                >
-                  <div>시가총액</div>
-                  <div>{coinInfo.market_data.market_cap["usd"]}</div>
-                </Grid>
-                <Grid
-                  item
-                  xs={6}
-                  display="flex"
-                  flexDirection="column"
-                  alignItems="flex-end"
-                >
-                  <div>24시간 거래대금</div>
-                  <div>
+                <Grid item xs={12} mb={3}>
+                  <Grid
+                    display="flex"
+                    justifyContent="flex-end"
+                    alignItems="flex-end"
+                  >
+                    <Typography
+                      variant="h5"
+                      fontWeight={700}
+                      lineHeight={1}
+                      mr={2}
+                    >
+                      {CURRENCY_SYMBOL[currency]}
+                      {coinInfo.market_data.current_price[currency]}
+                    </Typography>
                     {
-                      coinInfo.market_data.market_cap_change_24h_in_currency[
-                        "usd"
-                      ]
+                      coinInfo.market_data
+                        .price_change_percentage_1h_in_currency[currency]
                     }
-                  </div>
+                  </Grid>
+                  <Grid
+                    display="flex"
+                    justifyContent="flex-end"
+                    alignItems="flex-end"
+                  >
+                    <Typography variant="body2" color="gray" mr={2}>
+                      {(1).toFixed(8)} {coinInfo.symbol}
+                    </Typography>
+                    {
+                      coinInfo.market_data
+                        .price_change_percentage_1h_in_currency["usd"]
+                    }
+                  </Grid>
                 </Grid>
+                <SubCoinInfo
+                  contents={[
+                    {
+                      head: "시가총액",
+                      body: `${
+                        CURRENCY_SYMBOL[currency]
+                      }${coinInfo.market_data.market_cap[
+                        currency
+                      ].toLocaleString()}`,
+                    },
+                    {
+                      head: "24시간 거래대금",
+                      body: `${
+                        CURRENCY_SYMBOL[currency]
+                      }${coinInfo.market_data.total_volume[
+                        currency
+                      ].toLocaleString()}`,
+                    },
+                  ]}
+                />
               </Grid>
             </Grid>
 
-            <Grid container my={5} p={1} bgcolor={color.calculaterBackground}>
-              <Grid>가격 계산</Grid>
-              <Grid container justifyContent="center">
-                <Grid display="flex">
-                  <Grid>
-                    {coinInfo.name}
-                    <Input
-                      value={fromCurrency}
-                      onInput={changeFromCurrency}
-                      inputProps={{ style: { textAlign: "right" } }}
-                    />
-                  </Grid>
-                  <SwapHoriz />
-                  <Grid>
-                    {"USD"}
-                    <Input
-                      value={toCurrency}
-                      onInput={changeToCurrency}
-                      inputProps={{ style: { textAlign: "right" } }}
-                    />
-                  </Grid>
+            <Grid container my={5} p={1.5} bgcolor={color.calculaterBackground}>
+              <Typography variant="body1" fontWeight={600}>
+                가격 계산
+              </Typography>
+              <Grid container my={2} justifyContent="center">
+                <Grid display="flex" alignItems="center">
+                  <HorizontalTable
+                    contents={[
+                      {
+                        head: coinInfo.symbol.toLocaleUpperCase(),
+                        body: (
+                          <Input
+                            className="exchange-input"
+                            value={fromCurrency}
+                            onInput={changeFromCurrency}
+                            inputProps={{
+                              style: {
+                                textAlign: "right",
+                              },
+                            }}
+                          />
+                        ),
+                      },
+                    ]}
+                    isExchange={true}
+                  />
+                  <SwapHoriz fontSize="large" sx={{ mx: 2 }} />
+                  <HorizontalTable
+                    contents={[
+                      {
+                        head: currency.toLocaleUpperCase(),
+                        body: (
+                          <Input
+                            value={toCurrency}
+                            onInput={changeToCurrency}
+                            inputProps={{ style: { textAlign: "right" } }}
+                          />
+                        ),
+                      },
+                    ]}
+                    isExchange={true}
+                  />
                 </Grid>
               </Grid>
             </Grid>
 
             <Grid>
               <Grid textAlign="center">
-                <Button>설명보기 ▼</Button>
+                <Button
+                  sx={{ color: "black" }}
+                  onClick={() => setDescriptionOpen(!descriptionOpen)}
+                >
+                  설명보기 {descriptionOpen ? "▲" : "▼"}
+                </Button>
               </Grid>
-              <hr />
-              <p>
-                {coinInfo.description.ko
-                  ? coinInfo.description.ko
-                  : coinInfo.description.en}
-              </p>
+              <Divider sx={{ color: "lightgray" }} />
+              <Collapse in={descriptionOpen}>
+                <p>
+                  {coinInfo.description.ko
+                    ? coinInfo.description.ko
+                    : coinInfo.description.en}
+                </p>
+              </Collapse>
             </Grid>
           </div>
         ) : (
@@ -211,5 +281,75 @@ function CryptoPage() {
     </div>
   );
 }
+
+const SubCoinInfo = ({
+  contents,
+}: {
+  contents: {
+    head: string;
+    body: string;
+  }[];
+}) => {
+  return (
+    <>
+      {contents.map((content, idx) => (
+        <Grid
+          item
+          xs={6}
+          key={idx}
+          display="flex"
+          flexDirection="column"
+          alignItems="flex-end"
+          fontSize="0.75rem"
+          fontWeight={500}
+        >
+          <div>{content.head}</div>
+          <div>{content.body}</div>
+        </Grid>
+      ))}
+    </>
+  );
+};
+
+const HorizontalTable = ({
+  contents,
+  isExchange,
+}: {
+  contents: {
+    head: string;
+    body: string | React.ReactNode;
+  }[];
+  isExchange?: boolean;
+}) => {
+  return (
+    <TableContainer>
+      <Table sx={{ border: "1px solid lightgray" }}>
+        {contents.map((content, idx) => (
+          <TableRow key={idx}>
+            <TableCell
+              variant="head"
+              sx={{
+                py: isExchange ? 1 : 2,
+                background: color.tableHeadColor,
+                borderRight: isExchange ? "2px solid lightgray" : "none",
+              }}
+            >
+              <Typography
+                variant="body1"
+                fontSize={isExchange ? "1rem" : "0.9rem"}
+                fontWeight={600}
+              >
+                {content.head}
+              </Typography>
+            </TableCell>
+            <TableCell sx={{ py: 1, background: "white" }}>
+              {content.body}
+            </TableCell>
+          </TableRow>
+        ))}
+      </Table>
+    </TableContainer>
+  );
+};
 
 export default CryptoPage;

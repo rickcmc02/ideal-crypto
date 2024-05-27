@@ -8,9 +8,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { getCoinMarkets } from "pages/remotes";
 import {
-  COIN_MARKET_CONTROLLER,
   COIN_MARKET_HEADERS,
   CoinMarketHeader,
+  VIEW_MODES,
+  VIEW_MODE_LABELS,
+  ViewMode,
 } from "./data";
 
 import {
@@ -29,21 +31,11 @@ import {
   TableRow,
   Tabs,
 } from "@mui/material";
-import { KeyboardArrowDown, KeyboardArrowUp, Star } from "@mui/icons-material";
+import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import StarButton from "components/button/Star";
 import { useBookmark } from "hooks/useBookmark";
-
-type ViewMode = "list" | "bookmark";
-const viewModes: ViewMode[] = ["list", "bookmark"];
-const viewModeLabels: { [key in ViewMode]: string } = {
-  list: "전체보기",
-  bookmark: "북마크",
-};
-
-const currencySymbols: { [key in CurrencyType]: string } = {
-  krw: "₩",
-  usd: "$",
-};
+import { COIN_MARKET_CONTROLLER, CURRENCY_SYMBOL } from "models/coin.data";
+import DropdownButton from "components/button/Dropdown";
 
 const color = {
   text: "#000",
@@ -72,14 +64,10 @@ function BoardPage() {
     per_page: 50,
     price_change_percentage: "1h,24h,7d",
   });
-  const [dropdownAnchorEl, setDropdownAnchorEl] = useState<null | HTMLElement>(
-    null
-  );
-  const dropdownOpen = Boolean(dropdownAnchorEl);
 
   useEffect(() => {
     const viewParam = searchParams.get("view") as ViewMode;
-    if (viewParam && viewModes.includes(viewParam)) setViewMode(viewParam);
+    if (viewParam && VIEW_MODES.includes(viewParam)) setViewMode(viewParam);
   }, [searchParams]);
 
   useEffect(() => {
@@ -108,95 +96,53 @@ function BoardPage() {
 
   const sectionTab = () => {
     const handleTabChange = (e: React.SyntheticEvent, newValue: number) => {
-      handlePageChange(viewModes[newValue] as ViewMode);
+      handlePageChange(VIEW_MODES[newValue] as ViewMode);
     };
 
     return (
       <Box sx={{ width: "100%" }}>
         <Tabs
-          value={viewModes.indexOf(viewMode) || 0}
+          value={VIEW_MODES.indexOf(viewMode) || 0}
           onChange={handleTabChange}
           centered
         >
           <Tab label="가상자산 시세 목록" />
-          <Tab label={`${viewModeLabels[viewModes[1]]} 목록`} />
+          <Tab label={`${VIEW_MODE_LABELS[VIEW_MODES[1]]} 목록`} />
         </Tabs>
       </Box>
     );
   };
 
   const sectionController = () => {
-    const handleSelectListButtonClick = (
-      event: React.MouseEvent<HTMLButtonElement>
-    ) => {
-      setDropdownAnchorEl(event.currentTarget);
-    };
-
-    const handleDropdownClose = () => {
-      setDropdownAnchorEl(null);
-    };
-
-    const selectDropdown = (dropdownId: string, itemValue: string | number) => {
-      if (dropdownId === "view_mode") {
-        handlePageChange(itemValue as ViewMode);
-      } else {
-        if (dropdownId === "per_page") setPages(1);
-        setCoinMarketParams({
-          ...coinMarketParams,
-          [dropdownId]: itemValue,
-        });
-      }
-
-      handleDropdownClose();
-    };
-
     return (
       <Grid container display="flex" justifyContent="flex-end">
         {Object.values(COIN_MARKET_CONTROLLER).map((controllerItem) => {
           const conId = controllerItem.id;
-          const endIcon =
-            conId === dropdownAnchorEl?.id ? (
-              <KeyboardArrowUp />
-            ) : (
-              <KeyboardArrowDown />
-            );
-          const buttonLabel =
-            controllerItem.id === "view_mode"
-              ? viewModeLabels[viewMode]
-              : coinMarketParams[conId as keyof RequestCoinMarkets] +
-                (controllerItem.addedLabel || "");
+          const selectDropdown = (value: string | number) => {
+            if (conId === "view_mode") {
+              handlePageChange(value as ViewMode);
+            } else {
+              if (conId === "per_page") setPages(1);
+              setCoinMarketParams({
+                ...coinMarketParams,
+                [conId]: value,
+              });
+            }
+          };
 
           return (
-            <Button
-              key={controllerItem.id}
-              id={controllerItem.id}
-              aria-label={`select-${controllerItem.id}`}
-              endIcon={endIcon}
-              onClick={handleSelectListButtonClick}
-            >
-              {buttonLabel}
-            </Button>
+            <DropdownButton
+              item={controllerItem}
+              selectFunc={selectDropdown}
+              label={
+                conId === "view_mode"
+                  ? VIEW_MODE_LABELS[viewMode]
+                  : coinMarketParams[conId as keyof RequestCoinMarkets] +
+                    (controllerItem.addedLabel || "")
+              }
+            />
           );
         })}
-        <Menu
-          anchorEl={dropdownAnchorEl}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-          open={dropdownOpen}
-          onClose={handleDropdownClose}
-        >
-          {dropdownAnchorEl &&
-            COIN_MARKET_CONTROLLER[
-              dropdownAnchorEl.id as keyof typeof COIN_MARKET_CONTROLLER
-            ].items.map((item) => (
-              <MenuItem
-                key={`${dropdownAnchorEl.id}_${item.value}`}
-                onClick={() => selectDropdown(dropdownAnchorEl.id, item.value)}
-              >
-                {item.label}
-              </MenuItem>
-            ))}
-        </Menu>
       </Grid>
     );
   };
@@ -311,7 +257,7 @@ const BoardTableCell = ({ header, value, currency }: BoardTableCellProps) => {
     valueFontSize = "0.8rem";
   }
   if (header.isCurrency) {
-    const symbol = currencySymbols[currency];
+    const symbol = CURRENCY_SYMBOL[currency];
     const twoDecimal = Math.floor((value as number) * 100) / 100;
     value = symbol + twoDecimal.toLocaleString();
   }
