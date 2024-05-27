@@ -20,8 +20,6 @@ import {
   Button,
   Container,
   Grid,
-  Menu,
-  MenuItem,
   Tab,
   Table,
   TableBody,
@@ -31,21 +29,11 @@ import {
   TableRow,
   Tabs,
 } from "@mui/material";
-import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import StarButton from "components/button/Star";
 import { useBookmark } from "hooks/useBookmark";
 import { COIN_MARKET_CONTROLLER, CURRENCY_SYMBOL } from "models/coin.data";
 import DropdownButton from "components/button/Dropdown";
-
-const color = {
-  text: "#000",
-  riseText: "crimson",
-  fallText: "royalblue",
-  tabText: "#787878",
-  tableHeaderBackground: "#fafafa",
-  tableHeaderText: "#808080",
-  symbolText: "#404040",
-};
+import { PALETTE } from "style/palette";
 
 function BoardPage() {
   const navigate = useNavigate();
@@ -175,7 +163,9 @@ function BoardPage() {
       <TableContainer>
         <Table>
           <TableHead>
-            <TableRow style={{ backgroundColor: color.tableHeaderBackground }}>
+            <TableRow
+              style={{ backgroundColor: PALETTE.tableHeaderBackground }}
+            >
               <TableCell sx={{ p: 1 }}></TableCell>
               {COIN_MARKET_HEADERS.map((header) => (
                 <TableCell
@@ -183,7 +173,7 @@ function BoardPage() {
                   align={header.align || "left"}
                   style={{
                     fontWeight: 500,
-                    color: color.tableHeaderText,
+                    color: PALETTE.tableHeaderText,
                   }}
                 >
                   {header.label}
@@ -217,7 +207,7 @@ function BoardPage() {
                   align="center"
                 >
                   <Button
-                    sx={{ color: color.text, fontWeight: 600 }}
+                    sx={{ color: PALETTE.text, fontWeight: 600 }}
                     onClick={viewMoreCoins}
                   >
                     + 더보기
@@ -250,10 +240,10 @@ interface BoardTableCellProps {
 }
 
 const BoardTableCell = ({ header, value, currency }: BoardTableCellProps) => {
-  let valueColor = color.text;
+  let valueColor = PALETTE.text;
   let valueFontSize = "1rem";
   if (header.id === "symbol") {
-    valueColor = color.symbolText;
+    valueColor = PALETTE.symbolText;
     valueFontSize = "0.8rem";
   }
   if (header.isCurrency) {
@@ -263,8 +253,8 @@ const BoardTableCell = ({ header, value, currency }: BoardTableCellProps) => {
   }
   if (header.isPercentage) {
     const oneDecimal = Math.floor((value as number) * 10) / 10;
-    if (oneDecimal > 0) valueColor = color.riseText;
-    if (oneDecimal < 0) valueColor = color.fallText;
+    if (oneDecimal > 0) valueColor = PALETTE.riseText;
+    if (oneDecimal < 0) valueColor = PALETTE.fallText;
     value = oneDecimal + "%";
   }
 

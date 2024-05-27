@@ -1,17 +1,12 @@
 import { Star } from "@mui/icons-material";
-import { IconButton, Popover, Popper } from "@mui/material";
+import { IconButton, Popper } from "@mui/material";
 import { useEffect, useState } from "react";
+import { PALETTE } from "style/palette";
 
 interface StarButtonProps {
   starOn: boolean;
   action: () => void;
 }
-
-const color = {
-  toastBackground: "#bdcce8",
-  starOn: "#ebb23e",
-  starOff: "#c4c4c4",
-};
 
 const StarButton = ({ starOn, action }: StarButtonProps) => {
   const [toastAnchor, setToastAnchor] = useState<null | HTMLElement>(null);
@@ -36,7 +31,7 @@ const StarButton = ({ starOn, action }: StarButtonProps) => {
       >
         <Star
           sx={{
-            fill: starOn ? color.starOn : color.starOff,
+            fill: starOn ? PALETTE.star.on : PALETTE.star.off,
           }}
         />
       </IconButton>
@@ -47,8 +42,8 @@ const StarButton = ({ starOn, action }: StarButtonProps) => {
         sx={{
           px: 1.5,
           py: 1,
-          backgroundColor: color.toastBackground,
-          border: "1px solid lightgray",
+          backgroundColor: PALETTE.star.toastBackground,
+          border: "1px solid " + PALETTE.borderColor,
           borderRadius: "4px",
           fontWeight: 700,
           fontSize: "0.8rem",

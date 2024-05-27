@@ -21,11 +21,7 @@ import StarButton from "components/button/Star";
 import { SwapHoriz } from "@mui/icons-material";
 import { COIN_MARKET_CONTROLLER, CURRENCY_SYMBOL } from "models/coin.data";
 import DropdownButton from "components/button/Dropdown";
-
-const color = {
-  calculaterBackground: "#d0d0d0",
-  tableHeadColor: "#ebebeb",
-};
+import { PALETTE } from "style/palette";
 
 function CryptoPage() {
   const location = useLocation();
@@ -122,16 +118,26 @@ function CryptoPage() {
               <Grid display="flex" alignItems="center">
                 {starButton(coinInfo.id, bookmarkIdData)}
                 {coinInfo.image?.small && (
-                  <img src={coinInfo.image.small} alt={coinInfo.name} />
+                  <img
+                    src={coinInfo.image.small}
+                    alt={coinInfo.name}
+                    style={{ width: "32px", height: "fit-content" }}
+                  />
                 )}
-                <h2>
+                <Typography
+                  variant="h1"
+                  ml={1.25}
+                  fontSize="1.6rem"
+                  fontWeight={700}
+                  lineHeight={1}
+                >
                   {coinInfo.name}
                   {coinInfo.symbol && (
                     <span style={{ marginLeft: 6, textTransform: "uppercase" }}>
                       ({coinInfo.symbol})
                     </span>
                   )}
-                </h2>
+                </Typography>
               </Grid>
               <Grid>{selectCurrency()}</Grid>
             </Grid>
@@ -209,8 +215,13 @@ function CryptoPage() {
               </Grid>
             </Grid>
 
-            <Grid container my={5} p={1.5} bgcolor={color.calculaterBackground}>
-              <Typography variant="body1" fontWeight={600}>
+            <Grid
+              container
+              my={5}
+              p={1.5}
+              bgcolor={PALETTE.calculaterBackground}
+            >
+              <Typography variant="body1" fontSize="0.8rem" fontWeight={600}>
                 가격 계산
               </Typography>
               <Grid container my={2} justifyContent="center">
@@ -258,13 +269,13 @@ function CryptoPage() {
             <Grid>
               <Grid textAlign="center">
                 <Button
-                  sx={{ color: "black" }}
+                  sx={{ color: PALETTE.text }}
                   onClick={() => setDescriptionOpen(!descriptionOpen)}
                 >
                   설명보기 {descriptionOpen ? "▲" : "▼"}
                 </Button>
               </Grid>
-              <Divider sx={{ color: "lightgray" }} />
+              <Divider sx={{ color: PALETTE.borderColor }} />
               <Collapse in={descriptionOpen}>
                 <p>
                   {coinInfo.description.ko
@@ -323,15 +334,17 @@ const HorizontalTable = ({
 }) => {
   return (
     <TableContainer>
-      <Table sx={{ border: "1px solid lightgray" }}>
+      <Table sx={{ border: "1px solid " + PALETTE.borderColor }}>
         {contents.map((content, idx) => (
           <TableRow key={idx}>
             <TableCell
               variant="head"
               sx={{
                 py: isExchange ? 1 : 2,
-                background: color.tableHeadColor,
-                borderRight: isExchange ? "2px solid lightgray" : "none",
+                background: PALETTE.tableHeadColor,
+                borderRight: isExchange
+                  ? "2px solid " + PALETTE.borderColor
+                  : "none",
               }}
             >
               <Typography
