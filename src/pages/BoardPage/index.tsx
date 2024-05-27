@@ -45,7 +45,6 @@ function BoardPage() {
   const [isError, setIsError] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [pages, setPages] = useState<number>(1);
   const [bookmarkIdData, setBookmarkIdData] = useState<{
     [key in string]: boolean;
   }>(bookmark.get());
@@ -54,6 +53,7 @@ function BoardPage() {
     vs_currency: "krw",
     order: "market_cap_desc",
     per_page: 50,
+    page: 1,
     price_change_percentage: "1h,24h,7d",
   });
 
@@ -83,7 +83,8 @@ function BoardPage() {
     if (isInit) setTimeout(() => setIsInit(false), 1000);
     const params = {
       ...coinMarketParams,
-      per_page: coinMarketParams.per_page * pages,
+      per_page: coinMarketParams.per_page * (coinMarketParams.page || 1),
+      page: 1, // per_page를 늘리고, CoinGecko API에서 1페이지만 요청 (전체 코인 목록을 새로고침하기 위함)
     };
     if (bmIds) params.ids = bmIds;
 
@@ -151,10 +152,10 @@ function BoardPage() {
           if (conId === "view_mode") {
             handlePageChange(value as ViewMode);
           } else {
-            if (conId === "per_page") setPages(1);
             setCoinMarketParams({
               ...coinMarketParams,
               [conId]: value,
+              page: conId === "per_page" ? 1 : coinMarketParams.page,
             });
           }
         };
@@ -178,7 +179,10 @@ function BoardPage() {
 
   const sectionTable = () => {
     const viewMoreCoins = () => {
-      setPages(pages + 1);
+      setCoinMarketParams({
+        ...coinMarketParams,
+        page: coinMarketParams.page ? coinMarketParams.page + 1 : 2,
+      });
     };
 
     const starButton = (
@@ -229,7 +233,7 @@ function BoardPage() {
               <TableRow>
                 <TableCell
                   colSpan={COIN_MARKET_HEADERS.length + 1}
-                  sx={{ p: 1, textAlign: "center" }}
+                  sx={{ textAlign: "center", fontWeight: 600 }}
                 >
                   요청 중 오류가 발생하였습니다. 잠시 후 다시 시도해주세요.
                 </TableCell>
