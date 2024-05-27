@@ -28,6 +28,8 @@ function CryptoPage() {
   const location = useLocation();
   const bookmark = useBookmark();
 
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isError, setIsError] = useState<boolean>(false);
   const [coinInfo, setCoinInfo] = useState<CoinInfo | null>(null);
   const [fromCurrency, setFromCurrency] = useState<string | number>(1);
   const [toCurrency, setToCurrency] = useState<string | number>(1);
@@ -41,8 +43,11 @@ function CryptoPage() {
     const path = location.pathname;
     if (path) {
       const id = path.split("crypto/")[1];
+      if (isError) setIsError(false);
+      setIsLoading(true);
       getCoinInfo(id)
         .then((res) => {
+          setIsLoading(false);
           if (res) {
             setCoinInfo(res);
             setFromCurrency(1);
@@ -52,6 +57,8 @@ function CryptoPage() {
           }
         })
         .catch((err) => {
+          setIsError(true);
+          setIsLoading(false);
           console.error(err);
           setCoinInfo(null);
         });
@@ -77,11 +84,11 @@ function CryptoPage() {
       e.preventDefault();
     }
   };
+
   const changeFromCurrency = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     renderCurrency(value, "from");
   };
-
   const changeToCurrency = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     renderCurrency(value, "to");
@@ -110,17 +117,17 @@ function CryptoPage() {
 
     const currencyValue = coinInfo?.market_data.current_price[currency] || 1;
     if (changed === "from") {
-      setFromCurrency(renderedValue.toLocaleString());
+      setFromCurrency(Number(renderedValue).toLocaleString());
       const exchangedValue = sliceMoreThanEightAfterDot(
         Number(renderedValue) * currencyValue + ""
       );
-      setToCurrency(exchangedValue.toLocaleString());
+      setToCurrency(Number(exchangedValue).toLocaleString());
     } else {
-      setToCurrency(renderedValue.toLocaleString());
+      setToCurrency(Number(renderedValue).toLocaleString());
       const exchangedValue = sliceMoreThanEightAfterDot(
         Number(renderedValue) / currencyValue + ""
       );
-      setFromCurrency(exchangedValue.toLocaleString());
+      setFromCurrency(Number(exchangedValue).toLocaleString());
     }
   };
 
@@ -185,8 +192,8 @@ function CryptoPage() {
               <Grid>{selectCurrency()}</Grid>
             </Grid>
 
-            <Grid container mt={5} columnSpacing={2}>
-              <Grid item xs={6}>
+            <Grid container mt={3} spacing={2}>
+              <Grid item xs={12} md={6}>
                 <HorizontalTable
                   contents={[
                     {
@@ -200,7 +207,7 @@ function CryptoPage() {
                   ]}
                 />
               </Grid>
-              <Grid item xs={6} container>
+              <Grid item xs={12} md={6} container>
                 <Grid item xs={12} mb={3}>
                   <Grid
                     display="flex"
@@ -214,12 +221,22 @@ function CryptoPage() {
                       mr={2}
                     >
                       {CURRENCY_SYMBOL[currency]}
-                      {coinInfo.market_data.current_price[currency]}
+                      {coinInfo.market_data.current_price[
+                        currency
+                      ].toLocaleString()}
                     </Typography>
-                    {
-                      coinInfo.market_data
-                        .price_change_percentage_1h_in_currency[currency]
-                    }
+                    <Typography
+                      variant="body2"
+                      fontSize="1rem"
+                      fontWeight={600}
+                    >
+                      <PercentageText
+                        value={
+                          coinInfo.market_data
+                            .price_change_percentage_1h_in_currency[currency]
+                        }
+                      />
+                    </Typography>
                   </Grid>
                   <Grid
                     display="flex"
@@ -229,10 +246,14 @@ function CryptoPage() {
                     <Typography variant="body2" color="gray" mr={2}>
                       {(1).toFixed(8)} {coinInfo.symbol}
                     </Typography>
-                    {
-                      coinInfo.market_data
-                        .price_change_percentage_1h_in_currency["usd"]
-                    }
+                    <Typography variant="body2" fontSize="0.8rem" mr={1}>
+                      <PercentageText
+                        value={
+                          coinInfo.market_data
+                            .price_change_percentage_1h_in_currency["usd"]
+                        }
+                      />
+                    </Typography>
                   </Grid>
                 </Grid>
                 <SubCoinInfo
@@ -310,38 +331,55 @@ function CryptoPage() {
               </Grid>
             </Grid>
 
-            <Grid>
-              <Grid textAlign="center">
-                <Button
-                  sx={{ color: PALETTE.text }}
-                  onClick={() => setDescriptionOpen(!descriptionOpen)}
-                >
-                  설명보기 {descriptionOpen ? "▲" : "▼"}
-                </Button>
+            {Boolean(coinInfo.description.ko || coinInfo.description.en) && (
+              <Grid>
+                <Grid textAlign="center">
+                  <Button
+                    sx={{ color: PALETTE.text }}
+                    onClick={() => setDescriptionOpen(!descriptionOpen)}
+                  >
+                    설명보기 {descriptionOpen ? "▲" : "▼"}
+                  </Button>
+                </Grid>
+                <Divider sx={{ color: PALETTE.borderColor }} />
+                <Collapse in={descriptionOpen}>
+                  <Typography
+                    variant="body2"
+                    fontSize="0.75rem"
+                    textAlign="left"
+                    whiteSpace={"pre-wrap"}
+                    py={2}
+                  >
+                    {coinInfo.description.ko
+                      ? coinInfo.description.ko
+                      : coinInfo.description.en}
+                  </Typography>
+                </Collapse>
               </Grid>
-              <Divider sx={{ color: PALETTE.borderColor }} />
-              <Collapse in={descriptionOpen}>
-                <Typography
-                  variant="body2"
-                  fontSize="0.75rem"
-                  textAlign="left"
-                  whiteSpace={"pre-wrap"}
-                  py={2}
-                >
-                  {coinInfo.description.ko
-                    ? coinInfo.description.ko
-                    : coinInfo.description.en}
-                </Typography>
-              </Collapse>
-            </Grid>
+            )}
           </div>
         ) : (
-          <p>Loading...</p>
+          <p>
+            {isLoading
+              ? "Loading..."
+              : isError
+              ? "요청 중 오류가 발생하였습니다. 잠시 후 다시 시도해주세요."
+              : "데이터가 없습니다."}
+          </p>
         )}
       </Container>
     </div>
   );
 }
+
+const PercentageText = ({ value }: { value: number }) => {
+  const oneDecimal = Math.floor((value as number) * 10) / 10;
+  let valueColor = PALETTE.text;
+  if (oneDecimal > 0) valueColor = PALETTE.riseText;
+  if (oneDecimal < 0) valueColor = PALETTE.fallText;
+
+  return <span style={{ color: valueColor }}>{oneDecimal}%</span>;
+};
 
 const SubCoinInfo = ({
   contents,

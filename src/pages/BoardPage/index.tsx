@@ -94,7 +94,7 @@ function BoardPage() {
       page: 1, // per_page를 늘리고, CoinGecko API에서 1페이지만 요청 (전체 코인 목록을 새로고침하기 위함)
     };
 
-    setIsError(false);
+    if (isError) setIsError(false);
     setIsLoading(true);
     getCoinMarkets(params)
       .then((res) => {
